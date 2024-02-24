@@ -16,23 +16,22 @@ int execute_user_command(node_information *node_info){
         || strncmp("join\n", buffer, 5) == 0 || strncmp("j\n", buffer, 2) == 0)
     {
 
-        int ring_id = -1;
-        int node_id = -1;
+        char ring_id[3];
+        char node_id[2];
         int status;
         char cmd[64];
 
-        status = sscanf(buffer, "%s %d %d", cmd, &ring_id, &node_id);
+        status = sscanf(buffer, "%s %s %s", cmd, ring_id, node_id);
 
-        if(status != 3 || (ring_id < 0 || ring_id > 999) || (node_id < 0 || node_id > 99)){
+        if(status != 3 || (atoi(ring_id) < 0 || atoi(ring_id) > 999) || (atoi(node_id) < 0 || atoi(node_id) > 99)){
             printf("Incorrect use of command join: join ring[0-999] id[0-99]\n");
-            return 1;
+            return SUCCESS;
         }
-
+        
 
         errcode = join(node_info, ring_id, node_id);
-        if(errcode != 1) return -1;
 
-        return 1;
+        return errcode;
 
     }
 
@@ -57,7 +56,7 @@ int execute_user_command(node_information *node_info){
         }
 
 
-        return 1;
+        return SUCCESS;
 
     }
 
@@ -70,12 +69,12 @@ int execute_user_command(node_information *node_info){
 
 
 
-    return -2;
+    return UNKNOWN_COMMAND;
 }
 
 
 
-int join(node_information * node_info, int ring_id, int node_id){
+int join(node_information * node_info, char ring_id[3], char node_id[2]){
 
     char buffer_out[32] , buffer_in[128];
     struct sockaddr_in addr;
@@ -84,7 +83,7 @@ int join(node_information * node_info, int ring_id, int node_id){
     ssize_t n;
 
     n = start_client_UDP(node_info->ns_ipaddr, node_info->ns_port, node_info);
-    if(n != 1) return -1;
+    if(n != 1) return E_FATAL;
 
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;
@@ -96,20 +95,31 @@ int join(node_information * node_info, int ring_id, int node_id){
         fflush(stdout);
         exit(EXIT_FAILURE);
     } 
+
+
+
     // The command to get the list of nodes
-    
-    sprintf(buffer_out, "NODES %d", ring_id);
+    sprintf(buffer_out, "NODES %s", ring_id);
 
     n = sendto(node_info->ns_fd, buffer_out, sizeof(buffer_out), 0, res->ai_addr, res->ai_addrlen);
     if(n == -1) {
         printf("Could not sendto %s:%s", node_info->ns_ipaddr, node_info->ns_port);
         fflush(stdout);
-        exit(1);
+        return E_FATAL;
     }
 
     addrlen = sizeof(addr);
     n = recvfrom(node_info->ns_fd, buffer_in, sizeof(buffer_in), 0, (struct sockaddr*)&addr, &addrlen);
-    if(n == -1) exit(1);
+    if(n == -1){
+
+        if(errno == EAGAIN || errno == EWOULDBLOCK) {
+            printf("\x1b[33mNode Server timed out...\x1b[0m\n");
+            return E_NON_FATAL;
+        } else {
+            return E_FATAL;
+        }
+        
+    } ;
 
 
     printf("%s\n", buffer_in);

@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
         //Will block until something happens, timeout after 1ms
         cor_interrupt i = wait_for_interrupt(app_node);
 
-        int success = 1;
+        status success = SUCCESS;
 
         switch (i)
         {
@@ -92,7 +92,7 @@ int main(int argc, char *argv[])
         }
 
 
-        if(success == -2) {
+        if(success == UNKNOWN_COMMAND) {
             printf("\x1b[33mUnknown Command\x1b[0m\n");
             printf("> ");
             fflush(stdout);
@@ -105,11 +105,15 @@ int main(int argc, char *argv[])
             break;
         }
 
-
-        if(success == -1) {
-            printf("\x1b[31mError Ocurred\x1b[0m\n");
-            break;
+        if(success == E_NON_FATAL) {
         }
+
+
+        if(success == E_FATAL) {
+            printf("\x1b[31mFatal Error Ocurred: %s\x1b[0m\n", strerror(errno));
+            exit(EXIT_FAILURE);
+        }
+        
 
         if(i != I_TIMEOUT) {
             printf("> ");

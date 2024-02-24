@@ -18,7 +18,7 @@ int execute_user_command(node_information *node_info);
 *
 * @returns 1 if success 
 */
-int join(node_information *node_info, int ring_id, int node_id);
+int join(node_information *node_info, char ring_id[3], char node_id[2]);
 
 /*
 *

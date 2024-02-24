@@ -11,6 +11,7 @@
 #include <sys/select.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 
 #include "node.h"
 
@@ -33,6 +34,13 @@ typedef enum interrupt {
 
 } cor_interrupt;
 
+
+typedef enum status {
+    E_FATAL = -1,
+    E_NON_FATAL = -2,
+    SUCCESS = 1,
+    UNKNOWN_COMMAND = 2
+} status;
 
 
 /*

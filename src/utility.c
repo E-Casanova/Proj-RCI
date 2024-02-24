@@ -62,7 +62,8 @@ cor_interrupt wait_for_interrupt(node_information * node_info){
         if(FD_ISSET(STDIN_FILENO, &readfds)) {
             FD_CLR(STDIN_FILENO, &readfds);
             return I_USER_COMMAND;
-        } else if (node_info->ns_fd != -1 && FD_ISSET(node_info->ns_fd, &readfds)) {
+        } 
+        else if (node_info->ns_fd != -1 && FD_ISSET(node_info->ns_fd, &readfds)) {
             // Message from node server
             return I_NODE_SERVER_MSG;
         }
