@@ -12,7 +12,7 @@ bin:
 	mkdir -p bin
 
 COR: $(FILES)
-	$(CC) -o bin/$@ $^ $(FLAGS) 
+	$(CC) -lc -o bin/$@ $^ $(FLAGS) 
 
 clean: 
 	rm -rf bin/*

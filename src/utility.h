@@ -68,4 +68,12 @@ int isip(const char * str);
 */
 cor_interrupt wait_for_interrupt(node_information *node_info);
 
+
+/*
+*
+* Somehow strnlen does not work so we have to make our own
+*
+*/
+size_t strnlen_2(const char * s, size_t maxlen);
+
 #endif

@@ -1,5 +1,6 @@
 #include "user_commands.h"
 #include "server.h"
+#include "utility.h"
 
 
 int execute_user_command(node_information *node_info){
@@ -27,7 +28,17 @@ int execute_user_command(node_information *node_info){
             printf("Incorrect use of command join: join ring[0-999] id[0-99]\n");
             return SUCCESS;
         }
-        
+
+        /*int ring_id_length = strlen(ring_id);  //bro this makes no sense
+        int node_id_length = strlen(node_id);
+
+        printf("%d\n", ring_id_length);
+        printf("%d\n", node_id_length);
+        */
+        if (strnlen_2(ring_id, 3) != 3 || strnlen_2(node_id, 2) != 2) {
+            printf("\x1b[33mInvalid: ring_id must have exactly 3 characters and node_id must have exactly 2 characters.\x1b[0m\n");
+            return SUCCESS;
+        }
 
         errcode = join(node_info, ring_id, node_id);
 
@@ -82,6 +93,17 @@ int join(node_information * node_info, char ring_id[3], char node_id[2]){
     struct addrinfo hints, *res;
     ssize_t n;
 
+    ssize_t node_id_int;
+    ssize_t ids[100];
+    int n_nodes = 0; // how many nodes in ring
+
+    if(node_id[0] < '0' || node_id[0] > '9' || node_id[1] < '0' || node_id[1] > '9') {
+        printf("Invalid node id...\n");
+        return E_NON_FATAL;
+    }
+
+    node_id_int = atoi(node_id);
+
     n = start_client_UDP(node_info->ns_ipaddr, node_info->ns_port, node_info);
     if(n != 1) return E_FATAL;
 
@@ -122,10 +144,58 @@ int join(node_information * node_info, char ring_id[3], char node_id[2]){
     } ;
 
 
-    printf("%s\n", buffer_in);
+    
+    char * token;
+
+    token = strtok(buffer_in, "\n");
+
+    token = strtok(NULL, "\n"); // Skip over NODES xxx
+
+    while (token != NULL)
+    {
+
+        n_nodes++;
+
+        sscanf(token, "%lu", &n);
+
+        ids[n_nodes-1] = n;
+
+        token = strtok(NULL, "\n");
+    }
+    
+    if(n_nodes == 0) {
+
+        printf("No nodes in ring, joining with id %s\n", node_id);
+
+        return SUCCESS;
+    }
+
+    for(int j = 0; j < n_nodes; j++){
+        if(ids[j] == node_id_int){
+            printf("ID already taken...\n");
+            node_id_int = 1;
+            break;
+        }
+    }
+
+    for(int j = 0; j < n_nodes; j++){
+
+        if(node_id_int > 99) {
+            printf("Ring is full...\n");
+            return E_NON_FATAL;
+        }
+
+        if(ids[j] == node_id_int){
+            node_id_int++;
+            j = 0;
+        }
+    }
+
+    printf("Joining node %s with id %lu\n", ring_id, node_id_int);
 
 
-    return 1;
+    
+    return E_NON_FATAL;
 
 }
 

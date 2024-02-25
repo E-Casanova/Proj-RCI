@@ -23,6 +23,22 @@ int isip(const char * str){
 
 }
 
+size_t strnlen_2(const char * s, size_t maxlen){
+
+    int result = 0;
+
+    for(int i = 0; i < maxlen; i++){
+
+        if(s[i] == '\0') return result;
+        result++;
+
+    }
+
+    return result;
+
+}
+
+
 
 cor_interrupt wait_for_interrupt(node_information * node_info){
 
