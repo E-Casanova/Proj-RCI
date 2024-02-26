@@ -2,6 +2,8 @@
 #include "node.h"
 #include "user_commands.h"
 
+#include <signal.h>
+
 
 #define DEFFAULT_NS_IP "193.136.138.142"
 #define DEFFAULT_NS_PORT "59000"
@@ -15,6 +17,12 @@ void usage(char * arg){
 
 int main(int argc, char *argv[])
 {
+
+    struct sigaction act;
+    memset(&act, 0, sizeof act);
+    act.sa_handler = SIG_IGN;
+
+    if(sigaction(SIGPIPE, &act, NULL) == -1) exit(1);
 
     char ns_ip[INET_ADDRSTRLEN];
     char ns_port[6];

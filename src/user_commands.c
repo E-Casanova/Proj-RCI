@@ -1,5 +1,5 @@
 #include "user_commands.h"
-#include "server.h"
+#include "server_client.h"
 #include "utility.h"
 
 
@@ -141,15 +141,15 @@ int join(node_information * node_info, char ring_id[3], char node_id[2]){
             return E_FATAL;
         }
         
-    } ;
+    }
+   
+    printf("%s\n", buffer_in);
 
-
-    
     char * token;
 
     token = strtok(buffer_in, "\n");
 
-    token = strtok(NULL, "\n"); // Skip over NODES xxx
+    token = strtok(NULL, "\n"); // Skip over NODESLIST xxx
 
     while (token != NULL)
     {
@@ -166,6 +166,40 @@ int join(node_information * node_info, char ring_id[3], char node_id[2]){
     if(n_nodes == 0) {
 
         printf("No nodes in ring, joining with id %s\n", node_id);
+
+        sprintf(buffer_out, "REG %s %s %s %s", ring_id, node_id, node_info->ipaddr, node_info->port);
+        sprintf(buffer_in, " ");
+
+        n = sendto(node_info->ns_fd, buffer_out, sizeof(buffer_out), 0, res->ai_addr, res->ai_addrlen);
+
+        if(n == -1) {
+
+            printf("Could not sendto %s:%s", node_info->ns_ipaddr, node_info->ns_port);
+            fflush(stdout);
+            return E_FATAL;
+        }
+
+        n = recvfrom(node_info->ns_fd, buffer_in, sizeof(buffer_in), 0, (struct sockaddr*)&addr, &addrlen);
+        if(n == -1){
+
+            if(errno == EAGAIN || errno == EWOULDBLOCK) {
+                printf("\x1b[33mNode Server timed out...\x1b[0m\n");
+                return E_NON_FATAL;
+            } else {
+                return E_FATAL;
+            }
+        }
+
+        //printf("%s\n", buffer_in);
+
+        if(strncmp(buffer_in, "OKREG", 5) != 0){
+            printf("Invalid register...\n");
+            return E_NON_FATAL;
+        }
+
+    
+
+        node_info->succ_id = (unsigned int)node_id_int;
 
         return SUCCESS;
     }
@@ -191,6 +225,8 @@ int join(node_information * node_info, char ring_id[3], char node_id[2]){
         }
     }
 
+    node_info->id = (unsigned int)node_id_int;
+
     printf("Joining node %s with id %lu\n", ring_id, node_id_int);
 
 
@@ -203,9 +239,13 @@ int direct_join(node_information * node_info, int node_id, int succ_id, char suc
 
     //Start TCP server
 
-    if(start_server(node_info) != 1){
+    if(start_server_TCP(node_info) != 1){
         printf("\n\x1b[32m Error starting TCP server @ %s:%s", node_info->ipaddr, node_info->port);
     };
+
+    if(start_client_successor(succ_ip, succ_tcp, node_info) == - 1) {
+        printf("\n\x1b[32m Error starting TCP client @ %s:%s", succ_ip, succ_tcp);
+    }
     
 
     return 1;

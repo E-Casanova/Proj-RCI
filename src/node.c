@@ -15,10 +15,12 @@ node_information* init_node(char ippadr[INET_ADDRSTRLEN], char port[6], int id, 
     strcpy(tmp->port, port);
 
     tmp->succ_id = 0;
+    tmp->succ_fd = -1;
     memset(tmp->succ_ip, 0, sizeof(tmp->succ_ip));
     memset(tmp->succ_port, 0, sizeof(tmp->succ_port));
 
     tmp->pred_id = 0;
+    tmp->pred_fd = -1;
     memset(tmp->pred_ip, 0, sizeof(tmp->pred_ip));
     memset(tmp->pred_port, 0, sizeof(tmp->pred_port));
 

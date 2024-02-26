@@ -1,5 +1,5 @@
-#ifndef SERVER_H
-#define SERVER_H
+#ifndef SERVER_CLIENT_H
+#define SERVER_CLIENT_H
 
 
 #include "utility.h"
@@ -11,7 +11,7 @@
 * @returns 1 if success
 *
 */
-int start_server(node_information * node_info);
+int start_server_TCP(node_information * node_info);
 
 
 /*
@@ -21,7 +21,7 @@ int start_server(node_information * node_info);
 * @returns 1 if success
 *
 */
-int start_client_TCP(char addr[INET_ADDRSTRLEN], char port[6], node_information * node_info);
+int start_client_successor(char succ_ip[INET_ADDRSTRLEN], char port[6], node_information * node_info);
 
 
 /*

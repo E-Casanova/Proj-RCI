@@ -5,12 +5,16 @@
 #include <stdlib.h>
 #include <string.h>
 
-typedef struct node_server
-{
-    char ippadr[INET_ADDRSTRLEN];
-    char port[6];
-} node_server;
 
+typedef struct succ_info {
+    struct addrinfo *res;
+} succ_info;
+
+typedef struct pred_info {
+    socklen_t addrlen;
+    struct addrinfo *res;
+    struct sockaddr_in addr;
+} pred_info;
 
 
 typedef struct node_information
@@ -39,12 +43,18 @@ typedef struct node_information
     char succ_ip[INET_ADDRSTRLEN];
     //Successor TCP port
     char succ_port[6];
+    //Successor's file descriptor
+    int succ_fd;
+    //Successor's address information
+    succ_info succ;
     //Predecessor id
     unsigned int pred_id;
     //Predecessor IP address
     char pred_ip[INET_ADDRSTRLEN];
     //Predecessor TCP Port
     char pred_port[6];
+    //Predecessor's file descriptor
+    int pred_fd;
 } node_information;
 
 /*
