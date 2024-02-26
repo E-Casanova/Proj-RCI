@@ -16,15 +16,16 @@ int start_server_TCP(node_information * node_info){
     hints.ai_flags = AI_PASSIVE;
 
     errcode = getaddrinfo(NULL, node_info->port, &hints, &res);
-    if (errcode != 0) exit(1);
+    if (errcode != 0) return -1;
 
     errcode = bind(fd, res->ai_addr, res->ai_addrlen);
-    if (errcode == -1) exit(1);
+    if (errcode == -1) return -1;
 
     errcode = listen(fd, 10);
-    if (errcode == -1) exit(1);
+    if (errcode == -1) return -1;
 
     node_info->pred.res = res;
+    node_info->pred_fd = fd;
     
 
 
@@ -50,10 +51,7 @@ int start_client_successor(char succ_ip[INET_ADDRSTRLEN], char port[6], node_inf
     hints.ai_flags=AI_PASSIVE;
 
     errcode=getaddrinfo(succ_ip,port,&hints,&res);
-    if( errcode!= 0) exit(1);
-
-    n=connect(fd,res->ai_addr,res->ai_addrlen);
-    if (n == -1) exit(1);
+    if( errcode!= 0) return -1;
 
     node_info->succ.res = res;
     node_info->succ_fd = fd;
@@ -62,8 +60,7 @@ int start_client_successor(char succ_ip[INET_ADDRSTRLEN], char port[6], node_inf
 
     n = connect(fd, res->ai_addr, res->ai_addrlen);
     if (n == -1) {
-        printf("Error connecting to TCP server @%s:%s", succ_ip, port);
-        exit(1);
+        return -1;
     }
 
     return 1;

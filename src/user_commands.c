@@ -50,7 +50,17 @@ int execute_user_command(node_information *node_info){
     if(strncmp("show topology ", buffer, 15) == 0 || strncmp("st ", buffer, 3) == 0
         || strncmp("show topology\n", buffer, 15) == 0 || strncmp("st\n", buffer, 3) == 0)
         {
+        status = sscanf(buffer, "%s %s", cmd, node_id);
+
+        if(status != 2 || (atoi(node_id) < 0 || atoi(node_id) > 99)){
+            printf("Incorrect use of command st: id[0-99]\n");
+            return SUCCESS;
+        }
+
+        errcode = show_topology(node_info, node_id);
         
+        return errcode;
+
         }
     */
 
@@ -246,15 +256,26 @@ int join(node_information * node_info, char ring_id[3], char node_id[2]){
 
 int direct_join(node_information * node_info, int node_id, int succ_id, char succ_ip[INET_ADDRSTRLEN], char succ_tcp[6]){
 
+    char buffer[128];
+
     //Start TCP server
 
     if(start_server_TCP(node_info) != 1){
-        printf("\n\x1b[32m Error starting TCP server @ %s:%s", node_info->ipaddr, node_info->port);
+        printf("\x1b[33m Error starting TCP server @ %s:%s\x1b[0m\n", node_info->ipaddr, node_info->port);
+        exit(1);
     };
 
     if(start_client_successor(succ_ip, succ_tcp, node_info) == - 1) {
-        printf("\n\x1b[32m Error starting TCP client @ %s:%s", succ_ip, succ_tcp);
+        printf("\x1b[33m Error connecting to TCP server @ %s:%s\x1b[0m\n", succ_ip, succ_tcp);
+        exit(1);
     }
+
+    node_info->id = node_id;
+    node_info->succ_id = succ_id;
+    strcpy(node_info->succ_ip, succ_ip);
+    strcpy(node_info->succ_port, succ_tcp);
+
+    
     
 
     return 1;

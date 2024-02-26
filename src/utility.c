@@ -60,6 +60,14 @@ cor_interrupt wait_for_interrupt(node_information * node_info){
         FD_SET(node_info->ns_fd, &readfds);
         fdmax = node_info->ns_fd > fdmax ? node_info->ns_fd : fdmax;
     }
+    if(node_info->succ_fd > 0) {
+        FD_SET(node_info->succ_fd, &readfds);
+        fdmax = node_info->succ_fd > fdmax ? node_info->succ_fd : fdmax;
+    }
+    if(node_info->pred_fd > 0) {
+        FD_SET(node_info->pred_fd, &readfds);
+        fdmax = node_info->pred_fd > fdmax ? node_info->pred_fd : fdmax;
+    }
 
 
     //Add remaining file descriptors
@@ -79,9 +87,17 @@ cor_interrupt wait_for_interrupt(node_information * node_info){
             FD_CLR(STDIN_FILENO, &readfds);
             return I_USER_COMMAND;
         } 
-        else if (node_info->ns_fd != -1 && FD_ISSET(node_info->ns_fd, &readfds)) {
+        if (node_info->ns_fd != -1 && FD_ISSET(node_info->ns_fd, &readfds)) {
             // Message from node server
             return I_NODE_SERVER_MSG;
+        }
+        if (node_info->succ_fd != -1 && FD_ISSET(node_info->succ_fd, &readfds)) {
+            //Message from successor
+            return I_MESSAGE_SUCCESSOR;
+        }
+        if (node_info->pred_fd != -1 && FD_ISSET(node_info->pred_fd, &readfds)) {
+            //Message from predecessor
+            return I_MESSAGE_PREDECESSOR;
         }
 
     }

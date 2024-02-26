@@ -94,7 +94,12 @@ int main(int argc, char *argv[])
         case I_USER_COMMAND:
             success = execute_user_command(app_node);
             break;
-        
+        case I_MESSAGE_PREDECESSOR:
+            printf("Incoming message from predecessor...\n");
+            break;
+        case I_MESSAGE_SUCCESSOR:
+            printf("Incoming message from successor...\n");
+            break;
         default:
             break;
         }
