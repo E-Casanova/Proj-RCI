@@ -1,6 +1,7 @@
 #include "utility.h"
 #include "node.h"
 #include "user_commands.h"
+#include "server_client.h"
 
 #include <signal.h>
 
@@ -100,6 +101,9 @@ int main(int argc, char *argv[])
         case I_MESSAGE_SUCCESSOR:
             printf("Incoming message from successor...\n");
             break;
+        case I_NEW_CONNECTION:
+            printf("New connection inbound\n");
+            accept_inbound_connection(app_node);
         default:
             break;
         }

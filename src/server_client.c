@@ -21,11 +21,11 @@ int start_server_TCP(node_information * node_info){
     errcode = bind(fd, res->ai_addr, res->ai_addrlen);
     if (errcode == -1) return -1;
 
-    errcode = listen(fd, 10);
+    errcode = listen(fd, 100);
     if (errcode == -1) return -1;
 
     node_info->pred.res = res;
-    node_info->pred_fd = fd;
+    node_info->server_fd = fd;
     
 
 
@@ -33,6 +33,25 @@ int start_server_TCP(node_information * node_info){
     return 1;
 }
 
+
+int accept_inbound_connection(node_information * node_info){
+
+    char connection_ip[INET_ADDRSTRLEN];
+    struct sockaddr addr;
+    socklen_t addrlen = sizeof(addr);
+
+    int newfd = accept(node_info->server_fd, &addr, &addrlen);
+    if (newfd == -1) return E_FATAL;
+
+
+    inet_ntop(AF_INET, &((struct sockaddr_in*)&addr)->sin_addr, connection_ip, INET_ADDRSTRLEN);
+
+    printf("%s\n", connection_ip);
+
+    return SUCCESS;
+
+
+}
 
 
 int start_client_successor(char succ_ip[INET_ADDRSTRLEN], char port[6], node_information * node_info){

@@ -34,5 +34,12 @@ int start_client_successor(char succ_ip[INET_ADDRSTRLEN], char port[6], node_inf
 int start_client_UDP(char addr[INET_ADDRSTRLEN], char port[6], node_information * node_info);
 
 
+/*
+*
+* Accepts a new inbound connection 
+* 
+* @returns 1 if success
+*/
+int accept_inbound_connection(node_information * node_info);
 
 #endif

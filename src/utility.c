@@ -54,8 +54,6 @@ cor_interrupt wait_for_interrupt(node_information * node_info){
     FD_SET(STDIN_FILENO, &readfds);
     fdmax = STDIN_FILENO > fdmax ? STDIN_FILENO : fdmax;
 
-
-    //Check if connectrd to node server
     if(node_info->ns_fd > 0) {
         FD_SET(node_info->ns_fd, &readfds);
         fdmax = node_info->ns_fd > fdmax ? node_info->ns_fd : fdmax;
@@ -67,6 +65,10 @@ cor_interrupt wait_for_interrupt(node_information * node_info){
     if(node_info->pred_fd > 0) {
         FD_SET(node_info->pred_fd, &readfds);
         fdmax = node_info->pred_fd > fdmax ? node_info->pred_fd : fdmax;
+    }
+    if(node_info->server_fd > 0) {
+        FD_SET(node_info->server_fd, &readfds);
+        fdmax = node_info->server_fd > fdmax ? node_info->server_fd : fdmax;
     }
 
 
@@ -88,7 +90,7 @@ cor_interrupt wait_for_interrupt(node_information * node_info){
             return I_USER_COMMAND;
         } 
         if (node_info->ns_fd != -1 && FD_ISSET(node_info->ns_fd, &readfds)) {
-            // Message from node server
+            //Message from node server
             return I_NODE_SERVER_MSG;
         }
         if (node_info->succ_fd != -1 && FD_ISSET(node_info->succ_fd, &readfds)) {
@@ -99,6 +101,11 @@ cor_interrupt wait_for_interrupt(node_information * node_info){
             //Message from predecessor
             return I_MESSAGE_PREDECESSOR;
         }
+        if (node_info->server_fd != -1 && FD_ISSET(node_info->server_fd, &readfds)) {
+            //Someone is trying to connect
+            return I_NEW_CONNECTION;
+        }
+
 
     }
 

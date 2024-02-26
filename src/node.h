@@ -31,6 +31,8 @@ typedef struct node_information
     int ns_fd; 
     /////////////////////
 
+    //TCP server's file descriptor
+    int server_fd;
     // Node id
     unsigned int id;
     //Node IP
@@ -55,8 +57,20 @@ typedef struct node_information
     char pred_port[6];
     //Predecessor's file descriptor
     int pred_fd;
-
+    //Predecessor's address information
     pred_info pred;
+
+
+    //////CHORDS//////
+
+    int n_chords;
+    int chord_fds[100];
+    char chord_ips[100][INET_ADDRSTRLEN];
+    char chord_ports[100][6];
+
+    //////////////////
+
+
 } node_information;
 
 /*
