@@ -4,11 +4,32 @@
 
 int start_server_TCP(node_information * node_info){
 
+    int fd, errcode;
+    struct addrinfo hints,*res;
+
+    fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (fd == -1) exit(1);
+
+    memset(&hints, 0, sizeof hints);
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = AI_PASSIVE;
+
+    errcode = getaddrinfo(NULL, node_info->port, &hints, &res);
+    if (errcode != 0) exit(1);
+
+    errcode = bind(fd, res->ai_addr, res->ai_addrlen);
+    if (errcode == -1) exit(1);
+
+    errcode = listen(fd, 10);
+    if (errcode == -1) exit(1);
+
+    node_info->pred.res = res;
+    
 
 
 
-
-    return -1;
+    return 1;
 }
 
 
@@ -44,8 +65,6 @@ int start_client_successor(char succ_ip[INET_ADDRSTRLEN], char port[6], node_inf
         printf("Error connecting to TCP server @%s:%s", succ_ip, port);
         exit(1);
     }
-
-
 
     return 1;
 }

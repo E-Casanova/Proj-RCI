@@ -46,6 +46,14 @@ int execute_user_command(node_information *node_info){
 
     }
 
+    /*SHOW TOPOLOGY
+    if(strncmp("show topology ", buffer, 15) == 0 || strncmp("st ", buffer, 3) == 0
+        || strncmp("show topology\n", buffer, 15) == 0 || strncmp("st\n", buffer, 3) == 0)
+        {
+        
+        }
+    */
+
     if(strncmp("direct join ", buffer, 12) == 0 || strncmp("dj ", buffer, 3) == 0
         || strncmp("direct join\n", buffer, 5) == 0 || strncmp("dj\n", buffer, 2) == 0)
     {    
@@ -66,6 +74,7 @@ int execute_user_command(node_information *node_info){
             return 1;
         }
 
+        direct_join(node_info, node_id, succ_id, succ_ip, succ_port);
 
         return SUCCESS;
 

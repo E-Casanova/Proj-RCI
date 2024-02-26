@@ -55,6 +55,8 @@ typedef struct node_information
     char pred_port[6];
     //Predecessor's file descriptor
     int pred_fd;
+
+    pred_info pred;
 } node_information;
 
 /*
