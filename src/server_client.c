@@ -93,7 +93,13 @@ int process_message_frompred(node_information * node_info){
     int n = read(node_info->pred_fd, buffer, 128);
     if (n == -1) return E_FATAL;
 
-    printf("%s\n", buffer);
+        
+    if( n == 0) {
+        printf("\nConnection closed with %s\n", node_info->pred_ip);
+        exit(EXIT_FAILURE);
+    }
+
+    printf("%s", buffer);
 
     if(strncmp(buffer, "ENTRY ", 6) == 0){
 
@@ -111,6 +117,8 @@ int process_message_fromsucc(node_information * node_info){
 
     int n = read(node_info->succ_fd, buffer, 128);
     if (n == -1) return E_FATAL;
+
+    printf("%s", buffer);
     
     if( n == 0) {
         printf("\nConnection closed with %s\n", node_info->succ_ip);
@@ -241,6 +249,8 @@ int process_ENTRY(node_information * node_info, char buffer[BUFFER_SIZE], int wh
         n = getaddrinfo(ip, port, &hints, &res);
         if (n == -1) exit(1);
 
+        node_info->succ_fd = socket(AF_INET, SOCK_STREAM, 0);
+
         n = connect(node_info->succ_fd, res->ai_addr, res->ai_addrlen);
         if (n == -1) exit(1);
 
@@ -253,7 +263,7 @@ int process_ENTRY(node_information * node_info, char buffer[BUFFER_SIZE], int wh
 
     } else if(whofrom == 0) { // Message comes from random node
 
-        if((node_info->succ_id == node_info->id ) || (node_info->pred_id = node_info->id)){ // only one node in ring
+        if((node_info->succ_id == node_info->id ) || (node_info->pred_id == node_info->id)){ // only one node in ring
 
             printf("Only one node in ring...\n");
 
@@ -307,7 +317,7 @@ int process_ENTRY(node_information * node_info, char buffer[BUFFER_SIZE], int wh
 
         node_info->pred_id = id;
         strcpy(node_info->pred_ip, ip);
-        strcpy(node_info->port, port);
+        strcpy(node_info->pred_port, node_info->temp_port);
 
         close(node_info->pred_fd);
         node_info->pred_fd = node_info->temp_fd;
@@ -354,6 +364,8 @@ int process_SUCC(node_information * node_info, char buffer[BUFFER_SIZE],int whof
     if (whofrom == 1) {
         printf("Set node %s as second successor...\n", id_str);
         node_info->ss_id = id;
+        strcpy(node_info->ss_ip, ip);
+        strcpy(node_info->ss_port, port);
     }
 
 

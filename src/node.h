@@ -72,7 +72,10 @@ typedef struct node_information
 
     //Second successor's id
     int ss_id;
-
+    //Second successor's ip
+    char ss_ip[INET_ADDRSTRLEN];
+    //Second sucessor's port
+    char ss_port[6];
 
     int  temp_fd;
     char temp_ip[INET_ADDRSTRLEN];

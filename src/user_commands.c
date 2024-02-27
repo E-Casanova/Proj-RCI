@@ -51,9 +51,9 @@ int execute_user_command(node_information *node_info){
         || strncmp("show topology\n", buffer, 14) == 0 || strncmp("st\n", buffer, 3) == 0)
         {
             
-            printf("\x1b[36m------------SHOW TOPOLOGY-------------\n-- Node:          %d %s:%s --\n-- Successor:     %d %s:%s --\n-- Predecessor:   %d %s:%s --\n-- 2nd Successor: %d --\x1b[0m\n",
+            printf("\x1b[36m------------SHOW TOPOLOGY-------------\n-- Node:          %d %s:%s --\n-- Successor:     %d %s:%s --\n-- Predecessor:   %d %s:%s --\n-- 2nd Successor: %d %s:%s --\x1b[0m\n",
                 node_info->id, node_info->ipaddr, node_info->port ,node_info->succ_id, node_info->succ_ip, node_info->succ_port,
-                node_info->pred_id, node_info->pred_ip, node_info->pred_port, node_info->ss_id);
+                node_info->pred_id, node_info->pred_ip, node_info->pred_port, node_info->ss_id, node_info->ss_ip, node_info->ss_port);
             
             return SUCCESS;
 

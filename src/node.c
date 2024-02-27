@@ -13,6 +13,8 @@ node_information* init_node(char ippadr[INET_ADDRSTRLEN], char port[6], int id, 
     tmp->server_fd = -1;
 
     tmp->ss_id = -1;
+    memset(tmp->ss_ip, 0, sizeof(tmp->ss_ip));
+    memset(tmp->ss_port, 0, sizeof(tmp->ss_port));
 
     tmp->id = -1;
     strcpy(tmp->ipaddr, ippadr);
