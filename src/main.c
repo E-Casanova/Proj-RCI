@@ -79,9 +79,18 @@ int main(int argc, char *argv[])
     printf("Starting app @%s:%s\n",app_node->ipaddr, app_node->port);
 
     if (app_node == NULL) exit(1);
+
+    if(start_server_TCP(app_node) != 1){
+        printf("\x1b[33m Error starting TCP server @ %s:%s\x1b[0m\n", app_node->ipaddr, app_node->port);
+        free_app_node(app_node);
+        exit(1);
+    };
     
+
     printf("> ");
     fflush(stdout);
+
+    
 
     while (1)
     {
@@ -97,13 +106,18 @@ int main(int argc, char *argv[])
             break;
         case I_MESSAGE_PREDECESSOR:
             printf("Incoming message from predecessor...\n");
+            success = process_message_frompred(app_node);
             break;
         case I_MESSAGE_SUCCESSOR:
             printf("Incoming message from successor...\n");
+            success = process_message_fromsucc(app_node);
             break;
         case I_NEW_CONNECTION:
             printf("New connection inbound\n");
-            accept_inbound_connection(app_node);
+            success = accept_inbound_connection(app_node);
+        case I_MESSAGE_TEMP:
+            success = process_message_fromtemp(app_node);
+
         default:
             break;
         }
@@ -119,6 +133,7 @@ int main(int argc, char *argv[])
         if(success == 10) {
             printf("Exiting now...\n");
             fflush(stdout);
+            free_app_node(app_node);
             break;
         }
 

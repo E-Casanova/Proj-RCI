@@ -70,6 +70,10 @@ cor_interrupt wait_for_interrupt(node_information * node_info){
         FD_SET(node_info->server_fd, &readfds);
         fdmax = node_info->server_fd > fdmax ? node_info->server_fd : fdmax;
     }
+    if(node_info->temp_fd > 0) {
+        FD_SET(node_info->temp_fd, &readfds);
+        fdmax = node_info->temp_fd > fdmax ? node_info->temp_fd : fdmax;
+    }
 
 
     //Add remaining file descriptors
@@ -101,6 +105,10 @@ cor_interrupt wait_for_interrupt(node_information * node_info){
             //Message from predecessor
             return I_MESSAGE_PREDECESSOR;
         }
+        if (node_info->temp_fd != -1 && FD_ISSET(node_info->temp_fd, &readfds)) {
+            //Message from someone i dont know (yet)
+            return I_MESSAGE_TEMP;
+        }
         if (node_info->server_fd != -1 && FD_ISSET(node_info->server_fd, &readfds)) {
             //Someone is trying to connect
             return I_NEW_CONNECTION;
@@ -111,4 +119,16 @@ cor_interrupt wait_for_interrupt(node_information * node_info){
 
     return I_TIMEOUT;
 
+}
+
+
+void idtostr(int id, char str[2]){
+
+    str[0] ='0' + (id / 10);
+    str[1] ='0' + (id % 10);
+
+}
+
+void strtoid(int id, char str[2]){
+    id = (str[0] - '0') * 10 + str[1] - '0';
 }

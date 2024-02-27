@@ -42,4 +42,19 @@ int start_client_UDP(char addr[INET_ADDRSTRLEN], char port[6], node_information 
 */
 int accept_inbound_connection(node_information * node_info);
 
+
+int process_message_fromtemp(node_information * node_info);
+
+int process_message_frompred(node_information * node_info);
+
+int process_message_fromsucc(node_information * node_info);
+
+
+int process_ENTRY(node_information * node_info, char buffer[BUFFER_SIZE], int whofrom);
+
+int process_SUCC(node_information * node_info, char buffer[BUFFER_SIZE],int whofrom);
+
+int process_PRED(node_information * node_info, char buffer[BUFFER_SIZE], int whofrom);
+
+
 #endif

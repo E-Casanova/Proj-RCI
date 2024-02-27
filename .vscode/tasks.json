@@ -11,7 +11,7 @@
                 "-o",
                 "${fileDirname}/${fileBasenameNoExtension}",
                 "/home/drplant/Desktop/Rci/Projeto_clone/Proj-RCI/src/node.c",
-                "/home/drplant/Desktop/Rci/Projeto_clone/Proj-RCI/src/server.c",
+                "/home/drplant/Desktop/Rci/Projeto_clone/Proj-RCI/src/server_client.c",
                 "/home/drplant/Desktop/Rci/Projeto_clone/Proj-RCI/src/utility.c",
                 "/home/drplant/Desktop/Rci/Projeto_clone/Proj-RCI/src/user_commands.c"
             ],

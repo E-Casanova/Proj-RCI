@@ -4,7 +4,8 @@
 #include <arpa/inet.h>
 #include <stdlib.h>
 #include <string.h>
-
+#include <sys/socket.h>
+#include <unistd.h>
 
 typedef struct succ_info {
     struct addrinfo *res;
@@ -15,6 +16,15 @@ typedef struct pred_info {
     struct addrinfo *res;
     struct sockaddr_in addr;
 } pred_info;
+
+typedef struct chord_information {
+
+    int chord_fd;
+    char chord_ip[INET_ADDRSTRLEN];
+    char chord_port[6];
+    struct chord_information * next;
+
+} chord_information;
 
 
 typedef struct node_information
@@ -60,18 +70,23 @@ typedef struct node_information
     //Predecessor's address information
     pred_info pred;
 
+    //Second successor's id
+    int ss_id;
+
+
+    int  temp_fd;
+    char temp_ip[INET_ADDRSTRLEN];
+    char temp_port[6];
 
     //////CHORDS//////
 
-    int n_chords;
-    int chord_fds[100];
-    char chord_ips[100][INET_ADDRSTRLEN];
-    char chord_ports[100][6];
+    chord_information * chord_head;
 
     //////////////////
 
 
 } node_information;
+
 
 /*
 *
@@ -80,6 +95,10 @@ typedef struct node_information
 * @returns a node_information object
 */
 node_information* init_node(char ippadr[INET_ADDRSTRLEN], char port[6], int id, char ns_ipaddr[INET_ADDRSTRLEN], char ns_port[6]);
+
+
+
+void free_app_node(node_information * node_info);
 
 
 #endif

@@ -46,23 +46,19 @@ int execute_user_command(node_information *node_info){
 
     }
 
-    /*SHOW TOPOLOGY
-    if(strncmp("show topology ", buffer, 15) == 0 || strncmp("st ", buffer, 3) == 0
-        || strncmp("show topology\n", buffer, 15) == 0 || strncmp("st\n", buffer, 3) == 0)
+    /*SHOW TOPOLOGY*/
+    if(strncmp("show topology ", buffer, 14) == 0 || strncmp("st ", buffer, 3) == 0
+        || strncmp("show topology\n", buffer, 14) == 0 || strncmp("st\n", buffer, 3) == 0)
         {
-        status = sscanf(buffer, "%s %s", cmd, node_id);
-
-        if(status != 2 || (atoi(node_id) < 0 || atoi(node_id) > 99)){
-            printf("Incorrect use of command st: id[0-99]\n");
+            
+            printf("\x1b[36m------------SHOW TOPOLOGY-------------\n-- Node:          %d %s:%s --\n-- Successor:     %d %s:%s --\n-- Predecessor:   %d %s:%s --\n-- 2nd Successor: %d --\x1b[0m\n",
+                node_info->id, node_info->ipaddr, node_info->port ,node_info->succ_id, node_info->succ_ip, node_info->succ_port,
+                node_info->pred_id, node_info->pred_ip, node_info->pred_port, node_info->ss_id);
+            
             return SUCCESS;
-        }
-
-        errcode = show_topology(node_info, node_id);
-        
-        return errcode;
 
         }
-    */
+
 
     if(strncmp("direct join ", buffer, 12) == 0 || strncmp("dj ", buffer, 3) == 0
         || strncmp("direct join\n", buffer, 5) == 0 || strncmp("dj\n", buffer, 2) == 0)
@@ -84,9 +80,9 @@ int execute_user_command(node_information *node_info){
             return 1;
         }
 
-        direct_join(node_info, node_id, succ_id, succ_ip, succ_port);
+        errcode = direct_join(node_info, node_id, succ_id, succ_ip, succ_port);
 
-        return SUCCESS;
+        return errcode;
 
     }
 
@@ -257,17 +253,41 @@ int join(node_information * node_info, char ring_id[3], char node_id[2]){
 int direct_join(node_information * node_info, int node_id, int succ_id, char succ_ip[INET_ADDRSTRLEN], char succ_tcp[6]){
 
     char buffer[128];
+    char connection_ip[INET_ADDRSTRLEN];
+    struct sockaddr addr;
+    socklen_t addrlen = sizeof(addr);
+    char id_str[3];
+    id_str[2] = '\0';
 
-    //Start TCP server
+    node_info->id = node_id;
 
-    if(start_server_TCP(node_info) != 1){
-        printf("\x1b[33m Error starting TCP server @ %s:%s\x1b[0m\n", node_info->ipaddr, node_info->port);
-        exit(1);
-    };
+    idtostr(node_id, id_str);
+
+    //Start TCP client
 
     if(start_client_successor(succ_ip, succ_tcp, node_info) == - 1) {
-        printf("\x1b[33m Error connecting to TCP server @ %s:%s\x1b[0m\n", succ_ip, succ_tcp);
-        exit(1);
+        printf("\x1b[33mError connecting to TCP server @ %s:%s\x1b[0m\n", succ_ip, succ_tcp);
+        return E_FATAL;
+    }
+
+    if(node_id == succ_id){
+        node_info->pred_fd = accept(node_info->server_fd, &addr, &addrlen);
+
+        node_info->pred_id = node_id;
+        strcpy(node_info->pred_ip, node_info->ipaddr);
+        strcpy(node_info->pred_port, node_info->port);
+
+        node_info->ss_id = node_id;
+
+
+        inet_ntop(AF_INET, &((struct sockaddr_in*)&addr)->sin_addr, connection_ip, INET_ADDRSTRLEN);
+
+        printf("\x1b[34mConnection accepted from %s (myself)\x1b[0m\n", connection_ip);
+    } else {
+
+        
+
+
     }
 
     node_info->id = node_id;
@@ -275,8 +295,12 @@ int direct_join(node_information * node_info, int node_id, int succ_id, char suc
     strcpy(node_info->succ_ip, succ_ip);
     strcpy(node_info->succ_port, succ_tcp);
 
-    
-    
+
+
+    sprintf(buffer, "ENTRY %s %s %s\n", id_str, node_info->ipaddr, node_info->port);
+
+    int n = write(node_info->succ_fd,buffer, 128);
+    if (n == -1) return E_FATAL;
 
     return 1;
 }

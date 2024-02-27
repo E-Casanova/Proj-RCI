@@ -12,16 +12,18 @@ node_information* init_node(char ippadr[INET_ADDRSTRLEN], char port[6], int id, 
 
     tmp->server_fd = -1;
 
+    tmp->ss_id = -1;
+
     tmp->id = -1;
     strcpy(tmp->ipaddr, ippadr);
     strcpy(tmp->port, port);
 
-    tmp->succ_id = 0;
+    tmp->succ_id = -1;
     tmp->succ_fd = -1;
     memset(tmp->succ_ip, 0, sizeof(tmp->succ_ip));
     memset(tmp->succ_port, 0, sizeof(tmp->succ_port));
 
-    tmp->pred_id = 0;
+    tmp->pred_id = -1;
     tmp->pred_fd = -1;
     memset(tmp->pred_ip, 0, sizeof(tmp->pred_ip));
     memset(tmp->pred_port, 0, sizeof(tmp->pred_port));
@@ -30,14 +32,40 @@ node_information* init_node(char ippadr[INET_ADDRSTRLEN], char port[6], int id, 
     strcpy(tmp->ns_ipaddr, ns_ipaddr);
     strcpy(tmp->ns_port, ns_port);
 
+    tmp->temp_fd = -1;
+    memset(tmp->temp_ip, 0, sizeof(tmp->temp_ip));
+    memset(tmp->temp_port, 0, sizeof(tmp->temp_port));
 
-    tmp->n_chords = 0;
-    for(int i = 0; i < 100; i++){
-        tmp->chord_fds[i] = -1;
-        memset(tmp->chord_ips[i], 0, sizeof(tmp->chord_ips[i]));
-        memset(tmp->chord_ports[i], 0, sizeof(tmp->chord_ports[i]));
-    }
+    tmp->chord_head = (chord_information*)malloc(sizeof(chord_information));
 
+    tmp->chord_head->next = NULL;
+    tmp->chord_head->chord_fd = -1;
 
     return tmp;
+}
+
+void free_app_node(node_information * node_info){
+
+
+    if(node_info->server_fd != -1) close(node_info->server_fd);
+    close(node_info->pred_fd);
+    close(node_info->succ_fd);
+    close(node_info->temp_fd);
+
+    chord_information * tmp  = node_info->chord_head;
+    chord_information * tmp2 = tmp ;
+
+    while (tmp != NULL)
+    {
+        tmp2 = tmp;
+
+        tmp = tmp->next;
+
+        if(tmp2->chord_fd > 0) close(tmp2->chord_fd);
+        free(tmp2);
+
+    }
+    
+
+    return;
 }

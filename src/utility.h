@@ -22,10 +22,13 @@
 #include <sys/types.h>
 #include <netdb.h>
 
+#define BUFFER_SIZE 128
+
 
 typedef enum interrupt {
 
     I_USER_COMMAND,
+    I_MESSAGE_TEMP,
     I_NODE_SERVER_MSG,
     I_MESSAGE_PREDECESSOR,
     I_MESSAGE_SUCCESSOR,
@@ -76,5 +79,12 @@ cor_interrupt wait_for_interrupt(node_information *node_info);
 *
 */
 size_t strnlen_2(const char * s, size_t maxlen);
+
+
+
+void idtostr(int id, char str[2]);
+
+void strtoid(int id, char str[2]);
+
 
 #endif
