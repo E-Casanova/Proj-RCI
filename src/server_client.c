@@ -255,6 +255,8 @@ int process_ENTRY(node_information * node_info, char buffer[BUFFER_SIZE], int wh
 
         if((node_info->succ_id == node_info->id ) || (node_info->pred_id = node_info->id)){ // only one node in ring
 
+            printf("Only one node in ring...\n");
+
             node_info->ss_id = node_info->id;
 
             node_info->succ_id = id;
