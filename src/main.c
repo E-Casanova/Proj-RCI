@@ -116,6 +116,7 @@ int main(int argc, char *argv[])
             printf("New connection inbound\n");
             success = accept_inbound_connection(app_node);
         case I_MESSAGE_TEMP:
+            printf("New message from temporary node\n");
             success = process_message_fromtemp(app_node);
 
         default:

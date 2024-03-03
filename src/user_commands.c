@@ -80,6 +80,11 @@ int execute_user_command(node_information *node_info){
             return 1;
         }
 
+        if(node_info->succ_fd != -1) {
+            printf("\x1b[33mNode already running on this app...\x1b[0m\n");
+            return E_NON_FATAL;
+        }
+
         errcode = direct_join(node_info, node_id, succ_id, succ_ip, succ_port);
 
         return errcode;
@@ -212,11 +217,8 @@ int join(node_information * node_info, char ring_id[3], char node_id[2]){
             return E_NON_FATAL;
         }
 
-    
-
-        node_info->succ_id = (unsigned int)node_id_int;
-
-        return SUCCESS;
+        return direct_join(node_info, node_id_int, node_info->id, node_info->ipaddr, node_info->port); //joining myself
+        
     }
 
     for(int j = 0; j < n_nodes; j++){
@@ -242,11 +244,52 @@ int join(node_information * node_info, char ring_id[3], char node_id[2]){
 
     node_info->id = (unsigned int)node_id_int;
 
-    printf("Joining node %s with id %lu\n", ring_id, node_id_int);
+    int succ_id;
+    char succ_tcp[6];
+    char succ_ip[INET_ADDRSTRLEN];
 
+    token = strtok(buffer_in, "\n");
 
-    
-    return E_NON_FATAL;
+    token = strtok(NULL, "\n"); // Skip over NODESLIST xxx
+
+    sscanf(token, "%d %s %s", &succ_id, succ_tcp, succ_ip);
+
+    idtostr((int)node_id_int, node_id);
+
+    printf("Joining ring %s with id %lu\n", ring_id, node_id_int);
+    printf("Picked node %d for my successor...\n", succ_id);
+
+           
+
+    sprintf(buffer_out, "REG %s %s %s %s", ring_id, node_id, node_info->ipaddr, node_info->port);
+    sprintf(buffer_in, " ");
+
+    n = sendto(node_info->ns_fd, buffer_out, sizeof(buffer_out), 0, res->ai_addr, res->ai_addrlen);
+
+    if(n == -1) {
+
+        printf("Could not sendto %s:%s", node_info->ns_ipaddr, node_info->ns_port);
+        fflush(stdout);
+        return E_FATAL;
+    }
+
+    n = recvfrom(node_info->ns_fd, buffer_in, sizeof(buffer_in), 0, (struct sockaddr*)&addr, &addrlen);
+    if(n == -1){
+
+        if(errno == EAGAIN || errno == EWOULDBLOCK) {
+            printf("\x1b[33mNode Server timed out...\x1b[0m\n");
+            return E_NON_FATAL;
+        } else {
+            return E_FATAL;
+        }
+    }
+
+    if(strncmp(buffer_in, "OKREG", 5) != 0){
+        printf("Invalid register...\n");
+        return E_NON_FATAL;
+    }
+
+    return direct_join(node_info, node_id_int, succ_id, succ_ip, succ_tcp);
 
 }
 
@@ -278,17 +321,14 @@ int direct_join(node_information * node_info, int node_id, int succ_id, char suc
         strcpy(node_info->pred_port, node_info->port);
 
         node_info->ss_id = node_id;
-
+        strcpy(node_info->ss_ip, node_info->ipaddr);
+        strcpy(node_info->ss_port, node_info->port);
 
         inet_ntop(AF_INET, &((struct sockaddr_in*)&addr)->sin_addr, connection_ip, INET_ADDRSTRLEN);
 
         printf("\x1b[34mConnection accepted from %s (myself)\x1b[0m\n", connection_ip);
-    } else {
-
-        
-
-
     }
+
 
     node_info->id = node_id;
     node_info->succ_id = succ_id;

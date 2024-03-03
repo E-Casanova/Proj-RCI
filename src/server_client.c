@@ -67,7 +67,13 @@ int process_message_fromtemp(node_information * node_info){
     int n = read(node_info->temp_fd, buffer, 128);
     if (n == -1) return E_FATAL;
 
-    printf("%s", buffer);
+    if( n == 0) {
+        close(node_info->temp_fd);
+        node_info->temp_fd = -1;
+        return E_NON_FATAL;
+    };
+
+    printf("\n%s", buffer);
 
     if(strncmp(buffer, "ENTRY ", 6) == 0){
 
@@ -79,7 +85,7 @@ int process_message_fromtemp(node_information * node_info){
     if(strncmp(buffer, "PRED ", 5) == 0){
 
 
-        return process_PRED(node_info, buffer, 0);
+        return process_PRED(node_info, buffer, 0); // Comes from someone trying to tell me they are now my predecessor
     }
 
     return SUCCESS;
@@ -95,8 +101,13 @@ int process_message_frompred(node_information * node_info){
 
         
     if( n == 0) {
-        printf("\nConnection closed with %s\n", node_info->pred_ip);
-        exit(EXIT_FAILURE);
+        printf("\nConnection closed with predecessor: %s\n", node_info->pred_ip);
+        close(node_info->pred_fd);
+        node_info->pred_id = -1;
+        node_info->pred_fd = -1;
+        memset(node_info->pred_ip, 0, sizeof(node_info->pred_ip));
+        memset(node_info->pred_port, 0, sizeof(node_info->pred_port));
+        return E_NON_FATAL;
     }
 
     printf("%s", buffer);
@@ -121,8 +132,63 @@ int process_message_fromsucc(node_information * node_info){
     printf("%s", buffer);
     
     if( n == 0) {
-        printf("\nConnection closed with %s\n", node_info->succ_ip);
-        exit(EXIT_FAILURE);
+
+        printf("\nConnection closed with successor: %s\n", node_info->succ_ip);
+        close(node_info->succ_fd);
+        node_info->succ_id = -1;
+        node_info->succ_fd = -1;
+        memset(node_info->succ_ip, 0, sizeof(node_info->succ_ip));
+        memset(node_info->succ_port, 0, sizeof(node_info->succ_port));
+
+        node_info->succ_id = node_info->ss_id;
+        strcpy(node_info->succ_ip, node_info->ss_ip);
+        strcpy(node_info->succ_port, node_info->ss_port);
+
+
+        if(node_info->id == node_info->succ_id) { // Only one node remains in ring
+        
+            char id_str[3];
+            id_str[2] = '\0';
+            idtostr(node_info->id, id_str);
+
+
+            char connection_ip[INET_ADDRSTRLEN];
+            struct sockaddr addr;
+            socklen_t addrlen = sizeof(addr);
+
+
+            if(start_client_successor(node_info->succ_ip, node_info->succ_port, node_info) == - 1) {
+                printf("\x1b[33mError connecting to TCP server @ %s:%s\x1b[0m\n", node_info->succ_ip, node_info->succ_port);
+                return E_FATAL;
+            }
+
+            node_info->pred_fd = accept(node_info->server_fd, &addr, &addrlen);
+
+            node_info->pred_id = node_info->id;
+            strcpy(node_info->pred_ip, node_info->ipaddr);
+            strcpy(node_info->pred_port, node_info->port);
+
+            node_info->ss_id = node_info->id;
+
+
+            inet_ntop(AF_INET, &((struct sockaddr_in*)&addr)->sin_addr, connection_ip, INET_ADDRSTRLEN);
+
+            printf("\x1b[34mConnection accepted from %s (myself)\x1b[0m\n", connection_ip);
+
+            sprintf(buffer, "ENTRY %s %s %s\n", id_str, node_info->ipaddr, node_info->port);
+
+            int n = write(node_info->succ_fd,buffer, 128);
+            if (n == -1) return E_FATAL;
+
+            return 1;
+        }
+
+
+        n = start_client_successor(node_info->succ_ip, node_info->succ_port, node_info);
+
+
+
+        return SUCCESS;
     }
 
     if(strncmp(buffer, "ENTRY ", 6) == 0){
@@ -401,7 +467,7 @@ int process_PRED(node_information * node_info, char buffer[BUFFER_SIZE], int who
 
     }
 
-    if (whofrom == 1) { // coming from sucessor
+    if (whofrom == 1) { // coming from sucessor, only happens if there are only 2 nodes in ring
         printf("Set node %s as predecessor...\n", id_str);
         node_info->pred_id = node_info->succ_id;
         strcpy(node_info->pred_ip, node_info->succ_ip);
