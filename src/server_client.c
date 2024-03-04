@@ -45,15 +45,15 @@ int accept_inbound_connection(node_information * node_info){
     if (newfd == -1) return E_FATAL;
 
 
-    inet_ntop(AF_INET, &((struct sockaddr_in*)&addr)->sin_addr, connection_ip, INET_ADDRSTRLEN);
+    inet_ntop(AF_INET, &((struct sockaddr_in*)&addr)->sin_addr, connection_ip, INET_ADDRSTRLEN); //Get the ip
 
-    printf("\x1b[34mConnection accepted from %s\x1b[0m\n", connection_ip);
+    port = ntohs(((struct sockaddr_in*)&addr)->sin_port); // Get the port
+    snprintf(node_info->temp_port, sizeof(node_info->temp_port), "%hu", port);
 
     node_info->temp_fd = newfd;
     strcpy(node_info->temp_ip, connection_ip);
 
-    port = ntohs(((struct sockaddr_in*)&addr)->sin_port);
-    snprintf(node_info->temp_port, sizeof(node_info->temp_port), "%hu", port);
+    printf("\x1b[34m> Connection accepted from %s:%s\x1b[0m\n", node_info->temp_ip, node_info->temp_port);
 
     return SUCCESS;
 
@@ -74,7 +74,7 @@ int process_message_fromtemp(node_information * node_info){
         return E_NON_FATAL;
     };
 
-    printf("\n%s", buffer);
+    //printf("\n%s", buffer);
 
     if(strncmp(buffer, "ENTRY ", 6) == 0){
 
@@ -108,10 +108,12 @@ int process_message_frompred(node_information * node_info){
         node_info->pred_fd = -1;
         memset(node_info->pred_ip, 0, sizeof(node_info->pred_ip));
         memset(node_info->pred_port, 0, sizeof(node_info->pred_port));
-        return E_NON_FATAL;
+
+
+        return SUCCESS;
     }
 
-    printf("%s", buffer);
+    //printf("%s", buffer);
 
     if(strncmp(buffer, "ENTRY ", 6) == 0){
 
@@ -130,9 +132,13 @@ int process_message_fromsucc(node_information * node_info){
     int n = read(node_info->succ_fd, buffer, 128);
     if (n == -1) return E_FATAL;
 
-    printf("%s", buffer);
+    //printf("%s", buffer);
     
     if( n == 0) {
+
+        char id_str[3];
+        id_str[2] = '\0';
+        idtostr(node_info->id, id_str);
 
         printf("\nConnection closed with successor: %s\n", node_info->succ_ip);
         close(node_info->succ_fd);
@@ -147,10 +153,6 @@ int process_message_fromsucc(node_information * node_info){
 
 
         if(node_info->id == node_info->succ_id) { // Only one node remains in ring
-        
-            char id_str[3];
-            id_str[2] = '\0';
-            idtostr(node_info->id, id_str);
 
 
             char connection_ip[INET_ADDRSTRLEN];
@@ -188,7 +190,18 @@ int process_message_fromsucc(node_information * node_info){
 
         n = start_client_successor(node_info->succ_ip, node_info->succ_port, node_info);
 
-        
+        sprintf(buffer, "PRED %s\n", id_str);
+
+        n = write(node_info->succ_fd, buffer, BUFFER_SIZE);
+        if(n == -1) exit(EXIT_FAILURE);
+
+        idtostr(node_info->succ_id, id_str);
+
+        sprintf(buffer, "SUCC %s %s %s\n", id_str, node_info->succ_ip, node_info->succ_port);
+
+        n = write(node_info->pred_fd, buffer, BUFFER_SIZE);
+        if( n == -1) exit(EXIT_FAILURE);
+
         return SUCCESS;
     }
 
@@ -405,7 +418,7 @@ int process_ENTRY(node_information * node_info, char buffer[BUFFER_SIZE], int wh
 
 
         if(node_info->pred_id == node_info->id){
-            printf("Started a new ring...\n");
+            //printf("Started a new ring...\n");
         }
 
     };
@@ -432,7 +445,7 @@ int process_SUCC(node_information * node_info, char buffer[BUFFER_SIZE],int whof
 
     idtostr(id, id_str);
 
-    if (whofrom == 1) {
+    if (whofrom == 1) { // comming from my successor
         printf("Set node %s as second successor...\n", id_str);
         node_info->ss_id = id;
         strcpy(node_info->ss_ip, ip);
@@ -451,6 +464,7 @@ int process_PRED(node_information * node_info, char buffer[BUFFER_SIZE], int who
     char id_str[3];
     char command[32];
     int n;
+    char buffer_to_send[BUFFER_SIZE];
 
     id_str[2] = '\0';
 
@@ -472,6 +486,12 @@ int process_PRED(node_information * node_info, char buffer[BUFFER_SIZE], int who
         strcpy(node_info->pred_ip, node_info->temp_ip);
         strcpy(node_info->pred_port, node_info->temp_port);
 
+        idtostr(node_info->succ_id, id_str);
+
+        sprintf(buffer_to_send, "SUCC %s %s %s\n", id_str, node_info->succ_ip, node_info->succ_port);
+
+        n = write(node_info->pred_fd, buffer_to_send, BUFFER_SIZE);
+        if( n == -1) exit(EXIT_FAILURE);
 
     }
 

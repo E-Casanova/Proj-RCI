@@ -51,9 +51,18 @@ int execute_user_command(node_information *node_info){
         || strncmp("show topology\n", buffer, 14) == 0 || strncmp("st\n", buffer, 3) == 0)
         {
             
-            printf("\x1b[36m------------SHOW TOPOLOGY-------------\n-- Node:          %d %s:%s --\n-- Successor:     %d %s:%s --\n-- Predecessor:   %d %s:%s --\n-- 2nd Successor: %d %s:%s --\x1b[0m\n",
-                node_info->id, node_info->ipaddr, node_info->port ,node_info->succ_id, node_info->succ_ip, node_info->succ_port,
-                node_info->pred_id, node_info->pred_ip, node_info->pred_port, node_info->ss_id, node_info->ss_ip, node_info->ss_port);
+            char pred_id_str[3];
+            char succ_id_str[3];
+            char id_str[3];
+            char ss_id_str[3];
+
+            pred_id_str[2] = '\0'; succ_id_str[2] = '\0'; id_str[2] = '\0'; ss_id_str[2] = '\0';
+
+            idtostr(node_info->id, id_str); idtostr(node_info->pred_id, pred_id_str); idtostr(node_info->succ_id, succ_id_str); idtostr(node_info->ss_id, ss_id_str);
+
+            printf("\x1b[36m------------SHOW TOPOLOGY--------------\n-- Node:          %s %s:%s --\n-- Successor:     %s %s:%s --\n-- Predecessor:   %s %s:%s --\n-- 2nd Successor: %s %s:%s --\n---------------------------------------\x1b[0m\n",
+                id_str, node_info->ipaddr, node_info->port , succ_id_str, node_info->succ_ip, node_info->succ_port,
+                pred_id_str, node_info->pred_ip, node_info->pred_port, ss_id_str, node_info->ss_ip, node_info->ss_port);
             
             return SUCCESS;
 
@@ -88,6 +97,37 @@ int execute_user_command(node_information *node_info){
         errcode = direct_join(node_info, node_id, succ_id, succ_ip, succ_port);
 
         return errcode;
+
+    }
+
+    if(strncmp("leave\n", buffer, 6) == 0 || strncmp("l\n", buffer, 2) == 0
+        || strncmp("leave ", buffer, 6) == 0 || strncmp("l ", buffer, 2) == 0)
+    {
+        if(node_info->succ_fd != -1) close(node_info->succ_fd); //Close the succ connection if it exists
+
+        node_info->succ_fd = -1;
+        node_info->succ_id = -1;
+        memset(node_info->succ_ip, 0, sizeof(node_info->succ_ip));
+        memset(node_info->succ_port, 0, sizeof(node_info->succ_port));
+
+        if(node_info->pred_fd != -1) close(node_info->pred_fd); //Close the pred connection if it exists
+
+        node_info->pred_fd = -1;
+        node_info->pred_id = -1;
+        memset(node_info->pred_ip, 0, sizeof(node_info->pred_ip));
+        memset(node_info->pred_port, 0, sizeof(node_info->pred_port));
+
+        if(node_info->temp_fd != -1) close(node_info->temp_fd); //Close any temporary connections
+
+        node_info->temp_fd = -1;
+        memset(node_info->temp_ip, 0, sizeof(node_info->temp_ip));
+        memset(node_info->temp_ip, 0, sizeof(node_info->temp_port));
+
+        node_info->ss_id = -1;
+        memset(node_info->ss_ip, 0, sizeof(node_info->ss_ip));
+        memset(node_info->ss_port, 0, sizeof(node_info->ss_port));
+
+        return SUCCESS;
 
     }
 
@@ -163,7 +203,7 @@ int join(node_information * node_info, char ring_id[3], char node_id[2]){
         
     }
    
-    printf("%s\n", buffer_in);
+    //printf("%s\n", buffer_in);
     strcpy(tmp, buffer_in);
 
     char * token;
@@ -192,7 +232,7 @@ int join(node_information * node_info, char ring_id[3], char node_id[2]){
     
     if(n_nodes == 0) {
 
-        printf("No nodes in ring, joining with id %s\n", node_id);
+        printf("> No nodes in ring, joining with id %s\n", node_id);
 
         sprintf(buffer_out, "REG %s %s %s %s", ring_id, node_id, node_info->ipaddr, node_info->port);
         sprintf(buffer_in, " ");
@@ -210,7 +250,7 @@ int join(node_information * node_info, char ring_id[3], char node_id[2]){
         if(n == -1){
 
             if(errno == EAGAIN || errno == EWOULDBLOCK) {
-                printf("\x1b[33mNode Server timed out...\x1b[0m\n");
+                printf("\x1b[33m> Node Server timed out...\x1b[0m\n");
                 return E_NON_FATAL;
             } else {
                 return E_FATAL;
@@ -220,7 +260,7 @@ int join(node_information * node_info, char ring_id[3], char node_id[2]){
         //printf("%s\n", buffer_in);
 
         if(strncmp(buffer_in, "OKREG", 5) != 0){
-            printf("Invalid register...\n");
+            printf("> Invalid register...\n");
             return E_NON_FATAL;
         }
 
@@ -230,7 +270,7 @@ int join(node_information * node_info, char ring_id[3], char node_id[2]){
 
     for(int j = 0; j < n_nodes; j++){
         if(ids[j] == node_id_int){
-            printf("ID already taken...\n");
+            printf("> ID already taken...\n");
             node_id_int = 1;
             break;
         }
@@ -239,7 +279,7 @@ int join(node_information * node_info, char ring_id[3], char node_id[2]){
     for(int j = 0; j < n_nodes; j++){
 
         if(node_id_int > 99) {
-            printf("Ring is full...\n");
+            printf("> Ring is full...\n");
             return E_NON_FATAL;
         }
 
@@ -263,8 +303,8 @@ int join(node_information * node_info, char ring_id[3], char node_id[2]){
 
     idtostr((int)node_id_int, node_id);
 
-    printf("Joining ring %s with id %lu\n", ring_id, node_id_int);
-    printf("Picked node %d for my successor...\n", succ_id);
+    printf("> Joining ring %s with id %lu\n", ring_id, node_id_int);
+    //printf("Picked node %d for my successor...\n", succ_id);
 
            
 
@@ -284,7 +324,7 @@ int join(node_information * node_info, char ring_id[3], char node_id[2]){
     if(n == -1){
 
         if(errno == EAGAIN || errno == EWOULDBLOCK) {
-            printf("\x1b[33mNode Server timed out...\x1b[0m\n");
+            printf("\x1b[33m> Node Server timed out...\x1b[0m\n");
             return E_NON_FATAL;
         } else {
             return E_FATAL;
@@ -292,7 +332,7 @@ int join(node_information * node_info, char ring_id[3], char node_id[2]){
     }
 
     if(strncmp(buffer_in, "OKREG", 5) != 0){
-        printf("Invalid register...\n");
+        printf("> Invalid register...\n");
         return E_NON_FATAL;
     }
 
@@ -316,7 +356,7 @@ int direct_join(node_information * node_info, int node_id, int succ_id, char suc
     //Start TCP client
 
     if(start_client_successor(succ_ip, succ_tcp, node_info) == - 1) {
-        printf("\x1b[33mError connecting to TCP server @ %s:%s\x1b[0m\n", succ_ip, succ_tcp);
+        printf("\x1b[33m> Error connecting to TCP server @ %s:%s\x1b[0m\n", succ_ip, succ_tcp);
         return E_FATAL;
     }
 
@@ -335,7 +375,7 @@ int direct_join(node_information * node_info, int node_id, int succ_id, char suc
         inet_ntop(AF_INET, &((struct sockaddr_in*)&addr)->sin_addr, connection_ip, INET_ADDRSTRLEN);
         strcpy(node_info->pred_ip, connection_ip);
 
-        printf("\x1b[34mConnection accepted from %s (myself)\x1b[0m\n", connection_ip);
+        printf("\x1b[34m> Connection accepted from %s:%s (myself)\x1b[0m\n", node_info->pred_ip, node_info->pred_port);
     }
 
 
