@@ -107,7 +107,7 @@ int execute_user_command(node_information *node_info){
 
 int join(node_information * node_info, char ring_id[3], char node_id[2]){
 
-    char buffer_out[32] , buffer_in[128];
+    char buffer_out[32] , buffer_in[BUFFER_SIZE], tmp[BUFFER_SIZE];
     struct sockaddr_in addr;
     socklen_t addrlen;
     struct addrinfo hints, *res;
@@ -164,6 +164,7 @@ int join(node_information * node_info, char ring_id[3], char node_id[2]){
     }
    
     printf("%s\n", buffer_in);
+    strcpy(tmp, buffer_in);
 
     char * token;
 
@@ -173,6 +174,12 @@ int join(node_information * node_info, char ring_id[3], char node_id[2]){
 
     while (token != NULL)
     {
+        
+        if(token[0] > '9' || token[0] < '0') {
+            token = NULL;
+            break;
+        }
+
 
         n_nodes++;
 
@@ -217,7 +224,7 @@ int join(node_information * node_info, char ring_id[3], char node_id[2]){
             return E_NON_FATAL;
         }
 
-        return direct_join(node_info, node_id_int, node_info->id, node_info->ipaddr, node_info->port); //joining myself
+        return direct_join(node_info, node_id_int, node_id_int, node_info->ipaddr, node_info->port); //joining myself
         
     }
 
@@ -248,11 +255,11 @@ int join(node_information * node_info, char ring_id[3], char node_id[2]){
     char succ_tcp[6];
     char succ_ip[INET_ADDRSTRLEN];
 
-    token = strtok(buffer_in, "\n");
+    token = strtok(tmp, "\n");
 
     token = strtok(NULL, "\n"); // Skip over NODESLIST xxx
 
-    sscanf(token, "%d %s %s", &succ_id, succ_tcp, succ_ip);
+    sscanf(token, "%d %s %s", &succ_id, succ_ip, succ_tcp);
 
     idtostr((int)node_id_int, node_id);
 
@@ -316,15 +323,17 @@ int direct_join(node_information * node_info, int node_id, int succ_id, char suc
     if(node_id == succ_id){
         node_info->pred_fd = accept(node_info->server_fd, &addr, &addrlen);
 
+        short unsigned int port = ntohs(((struct sockaddr_in*)&addr)->sin_port);
+        snprintf(node_info->pred_port, sizeof(node_info->temp_port), "%hu", port);
+
         node_info->pred_id = node_id;
-        strcpy(node_info->pred_ip, node_info->ipaddr);
-        strcpy(node_info->pred_port, node_info->port);
 
         node_info->ss_id = node_id;
         strcpy(node_info->ss_ip, node_info->ipaddr);
         strcpy(node_info->ss_port, node_info->port);
 
         inet_ntop(AF_INET, &((struct sockaddr_in*)&addr)->sin_addr, connection_ip, INET_ADDRSTRLEN);
+        strcpy(node_info->pred_ip, connection_ip);
 
         printf("\x1b[34mConnection accepted from %s (myself)\x1b[0m\n", connection_ip);
     }

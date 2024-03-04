@@ -68,6 +68,7 @@ int process_message_fromtemp(node_information * node_info){
     if (n == -1) return E_FATAL;
 
     if( n == 0) {
+        printf("Connection lost with temporary node...\n");
         close(node_info->temp_fd);
         node_info->temp_fd = -1;
         return E_NON_FATAL;
@@ -164,30 +165,30 @@ int process_message_fromsucc(node_information * node_info){
 
             node_info->pred_fd = accept(node_info->server_fd, &addr, &addrlen);
 
-            node_info->pred_id = node_info->id;
-            strcpy(node_info->pred_ip, node_info->ipaddr);
-            strcpy(node_info->pred_port, node_info->port);
-
             node_info->ss_id = node_info->id;
 
 
             inet_ntop(AF_INET, &((struct sockaddr_in*)&addr)->sin_addr, connection_ip, INET_ADDRSTRLEN);
+            short unsigned int port = ntohs(((struct sockaddr_in*)&addr)->sin_port);
+            snprintf(node_info->pred_port, sizeof(node_info->temp_port), "%hu", port);
 
             printf("\x1b[34mConnection accepted from %s (myself)\x1b[0m\n", connection_ip);
+
+            node_info->pred_id = node_info->id;
+            strcpy(node_info->pred_ip, connection_ip);
 
             sprintf(buffer, "ENTRY %s %s %s\n", id_str, node_info->ipaddr, node_info->port);
 
             int n = write(node_info->succ_fd,buffer, 128);
             if (n == -1) return E_FATAL;
 
-            return 1;
+            return SUCCESS;
         }
 
 
         n = start_client_successor(node_info->succ_ip, node_info->succ_port, node_info);
 
-
-
+        
         return SUCCESS;
     }
 
@@ -347,6 +348,8 @@ int process_ENTRY(node_information * node_info, char buffer[BUFFER_SIZE], int wh
             close(node_info->pred_fd);
             close(node_info->succ_fd);
             node_info->pred_fd = node_info->temp_fd;
+
+            node_info->temp_fd = -1;
             
             sprintf(message, "SUCC %s %s %s\n", id_str, node_info->succ_ip, node_info->succ_port);
 
@@ -387,6 +390,8 @@ int process_ENTRY(node_information * node_info, char buffer[BUFFER_SIZE], int wh
 
         close(node_info->pred_fd);
         node_info->pred_fd = node_info->temp_fd;
+
+        node_info->temp_fd = -1;
 
         idtostr(node_info->succ_id, id_str);
 
@@ -461,6 +466,9 @@ int process_PRED(node_information * node_info, char buffer[BUFFER_SIZE], int who
         printf("Set node %s as predecessor...\n", id_str);
         node_info->pred_id = id;
         node_info->pred_fd = node_info->temp_fd;
+
+        node_info->temp_fd = -1;
+
         strcpy(node_info->pred_ip, node_info->temp_ip);
         strcpy(node_info->pred_port, node_info->temp_port);
 
