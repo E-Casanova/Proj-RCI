@@ -60,7 +60,7 @@ int execute_user_command(node_information *node_info){
 
             idtostr(node_info->id, id_str); idtostr(node_info->pred_id, pred_id_str); idtostr(node_info->succ_id, succ_id_str); idtostr(node_info->ss_id, ss_id_str);
 
-            printf("\x1b[36m------------SHOW TOPOLOGY--------------\n-- Node:          %s %s:%s --\n-- Successor:     %s %s:%s --\n-- Predecessor:   %s %s:%s --\n-- 2nd Successor: %s %s:%s --\n---------------------------------------\x1b[0m\n",
+            printf("\x1b[36m> ------------SHOW TOPOLOGY--------------\n> -- Node:          %s %s:%s --\n> -- Successor:     %s %s:%s --\n> -- Predecessor:   %s %s:%s --\n> -- 2nd Successor: %s %s:%s --\n> ---------------------------------------\x1b[0m\n",
                 id_str, node_info->ipaddr, node_info->port , succ_id_str, node_info->succ_ip, node_info->succ_port,
                 pred_id_str, node_info->pred_ip, node_info->pred_port, ss_id_str, node_info->ss_ip, node_info->ss_port);
             
@@ -103,6 +103,41 @@ int execute_user_command(node_information *node_info){
     if(strncmp("leave\n", buffer, 6) == 0 || strncmp("l\n", buffer, 2) == 0
         || strncmp("leave ", buffer, 6) == 0 || strncmp("l ", buffer, 2) == 0)
     {
+
+        char buffer_out[BUFFER_SIZE], buffer_in[BUFFER_SIZE];
+        struct addrinfo hints, *res;
+        struct sockaddr_in addr;
+        socklen_t addrlen = sizeof(addr);
+
+
+        int n = start_client_UDP(node_info->ns_ipaddr, node_info->ns_port, node_info);
+        if(n != 1) return E_FATAL;
+
+        memset(&hints, 0, sizeof(hints));
+        hints.ai_family = AF_INET;
+        hints.ai_socktype = SOCK_DGRAM;
+
+        int errcode = getaddrinfo(node_info->ns_ipaddr, node_info->ns_port, &hints, &res);
+        if( errcode == -1) exit(1);
+
+
+
+        sprintf(buffer_out, "UNREG %s %s", node_info->ring_id_str, node_info->id_str);
+
+        n = sendto(node_info->ns_fd, buffer_out, sizeof(buffer_out), 0, res->ai_addr, res->ai_addrlen);
+        if(n == -1) {
+            printf("Could not sendto %s:%s", node_info->ns_ipaddr, node_info->ns_port);
+            fflush(stdout);
+            return E_FATAL;
+        }
+
+        n = recvfrom(node_info->ns_fd, buffer_in, sizeof(buffer_in), 0, (struct sockaddr*)&addr, &addrlen);
+
+        if(strncmp(buffer_in, "OKUNREG", 7) != 0) {
+            printf("\x1b[33mInvalid UNREG response...\x1b[0m\n");
+            return E_NON_FATAL;
+        }
+
         if(node_info->succ_fd != -1) close(node_info->succ_fd); //Close the succ connection if it exists
 
         node_info->succ_fd = -1;
@@ -127,6 +162,11 @@ int execute_user_command(node_information *node_info){
         memset(node_info->ss_ip, 0, sizeof(node_info->ss_ip));
         memset(node_info->ss_port, 0, sizeof(node_info->ss_port));
 
+        printf("\x1b[32m> Successfully left ring %s\x1b[0m\n", node_info->ring_id_str);
+
+        memset(node_info->ring_id_str, 0, sizeof(node_info->ring_id_str));
+        memset(node_info->id_str, 0, sizeof(node_info->id_str));
+
         return SUCCESS;
 
     }
@@ -139,6 +179,13 @@ int execute_user_command(node_information *node_info){
     }
 
 
+    //CLEAR COMMAND (NOT NECESSARY)
+    if(strncmp("clear\n", buffer, 5) == 0 || strncmp("clear ", buffer, 5) == 0) {
+        int n = system("clear");
+        if( n == -1) exit(1);
+
+        return SUCCESS;
+    }
 
     return UNKNOWN_COMMAND;
 }
@@ -237,6 +284,9 @@ int join(node_information * node_info, char ring_id[3], char node_id[2]){
         sprintf(buffer_out, "REG %s %s %s %s", ring_id, node_id, node_info->ipaddr, node_info->port);
         sprintf(buffer_in, " ");
 
+        strcpy(node_info->ring_id_str, ring_id);
+        strcpy(node_info->id_str, node_id);
+
         n = sendto(node_info->ns_fd, buffer_out, sizeof(buffer_out), 0, res->ai_addr, res->ai_addrlen);
 
         if(n == -1) {
@@ -303,10 +353,11 @@ int join(node_information * node_info, char ring_id[3], char node_id[2]){
 
     idtostr((int)node_id_int, node_id);
 
-    printf("> Joining ring %s with id %lu\n", ring_id, node_id_int);
+    printf("\x1b[32m> Joining ring %s with id %lu\x1b[0m\n", ring_id, node_id_int);
     //printf("Picked node %d for my successor...\n", succ_id);
 
-           
+    strcpy(node_info->ring_id_str, ring_id);
+    strcpy(node_info->id_str, node_id);           
 
     sprintf(buffer_out, "REG %s %s %s %s", ring_id, node_id, node_info->ipaddr, node_info->port);
     sprintf(buffer_in, " ");
@@ -335,6 +386,9 @@ int join(node_information * node_info, char ring_id[3], char node_id[2]){
         printf("> Invalid register...\n");
         return E_NON_FATAL;
     }
+
+    close(node_info->ns_fd);
+    node_info->ns_fd = -1;
 
     return direct_join(node_info, node_id_int, succ_id, succ_ip, succ_tcp);
 

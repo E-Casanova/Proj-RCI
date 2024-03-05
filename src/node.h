@@ -81,12 +81,19 @@ typedef struct node_information
     char temp_ip[INET_ADDRSTRLEN];
     char temp_port[6];
 
-    //////CHORDS//////
+    //////CHORDS//////////
 
     chord_information * chord_head;
 
-    //////////////////
+    /////////////////////
 
+
+    /////AUXILLIARIES////
+
+    char id_str[3];
+    char ring_id_str[4];
+
+    //////////////////////
 
 } node_information;
 

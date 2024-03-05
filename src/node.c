@@ -43,6 +43,13 @@ node_information* init_node(char ippadr[INET_ADDRSTRLEN], char port[6], int id, 
     tmp->chord_head->next = NULL;
     tmp->chord_head->chord_fd = -1;
 
+
+    memset(tmp->ring_id_str, 0, sizeof(tmp->ring_id_str));
+    memset(tmp->id_str, 0, sizeof(tmp->id_str));
+
+    tmp->ring_id_str[3] = '\0';
+    tmp->id_str[2] = '\0';
+
     return tmp;
 }
 

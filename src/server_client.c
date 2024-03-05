@@ -179,10 +179,10 @@ int process_message_fromsucc(node_information * node_info){
             node_info->pred_id = node_info->id;
             strcpy(node_info->pred_ip, connection_ip);
 
-            sprintf(buffer, "ENTRY %s %s %s\n", id_str, node_info->ipaddr, node_info->port);
+            /*sprintf(buffer, "ENTRY %s %s %s\n", id_str, node_info->ipaddr, node_info->port);
 
             int n = write(node_info->succ_fd,buffer, 128);
-            if (n == -1) return E_FATAL;
+            if (n == -1) return E_FATAL; */
 
             return SUCCESS;
         }
