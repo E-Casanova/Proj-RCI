@@ -21,7 +21,7 @@ int start_server_TCP(node_information * node_info){
     errcode = bind(fd, res->ai_addr, res->ai_addrlen);
     if (errcode == -1) return -1;
 
-    errcode = listen(fd, 100);
+    errcode = listen(fd, 100); // lots of chords maybe
     if (errcode == -1) return -1;
 
     node_info->pred.res = res;
@@ -79,14 +79,19 @@ int process_message_fromtemp(node_information * node_info){
     if(strncmp(buffer, "ENTRY ", 6) == 0){
 
 
-        return process_ENTRY(node_info, buffer, 0); //Comes from temporary connection
+        return process_ENTRY(node_info, buffer, FROM_TEMP); //Comes from temporary connection
 
     }
 
     if(strncmp(buffer, "PRED ", 5) == 0){
 
 
-        return process_PRED(node_info, buffer, 0); // Comes from someone trying to tell me they are now my predecessor
+        return process_PRED(node_info, buffer, FROM_TEMP); // Comes from someone trying to tell me they are now my predecessor
+    }    
+    if(strncmp(buffer, "ROUTE ", 6) == 0){
+
+
+        return process_ROUTE(node_info, buffer, FROM_TEMP); //Not likely to happen and weird
     }
 
     return SUCCESS;
@@ -117,7 +122,13 @@ int process_message_frompred(node_information * node_info){
 
     if(strncmp(buffer, "ENTRY ", 6) == 0){
 
-        return process_ENTRY(node_info, buffer, -1); // ignore
+        return process_ENTRY(node_info, buffer, FROM_PRED); // ignore
+
+    }
+
+    if(strncmp(buffer, "ROUTE ", 6) == 0){
+
+        return process_ROUTE(node_info, buffer, FROM_PRED);
 
     }
 
@@ -207,19 +218,24 @@ int process_message_fromsucc(node_information * node_info){
 
     if(strncmp(buffer, "ENTRY ", 6) == 0){
 
-        return process_ENTRY(node_info, buffer, 1); // Comes from successor
+        return process_ENTRY(node_info, buffer, FROM_SUCC); // Comes from successor
 
     }
 
     if(strncmp(buffer, "SUCC ", 5) == 0){
 
-        return process_SUCC(node_info, buffer, 1);
+        return process_SUCC(node_info, buffer, FROM_SUCC);
 
     }
 
-    if(strncmp(buffer, "PRED ", 4) == 0){
+    if(strncmp(buffer, "PRED ", 5) == 0){
 
-        return process_PRED(node_info, buffer, 1);
+        return process_PRED(node_info, buffer, FROM_SUCC);
+    }
+
+    if(strncmp(buffer, "ROUTE ", 6) == 0){
+
+        return process_ROUTE(node_info, buffer, FROM_SUCC);
     }
 
     return SUCCESS;
@@ -286,7 +302,7 @@ int start_client_UDP(char addr[INET_ADDRSTRLEN], char port[6], node_information 
 
 
 
-int process_ENTRY(node_information * node_info, char buffer[BUFFER_SIZE], int whofrom){
+int process_ENTRY(node_information * node_info, char buffer[BUFFER_SIZE], whofrom who){
 
     char message[128];
     int id;
@@ -310,7 +326,7 @@ int process_ENTRY(node_information * node_info, char buffer[BUFFER_SIZE], int wh
     sscanf(buffer, "%s %s %s %s\n", command, id_str, ip, port);
 
 
-    if(whofrom == 1) { // If ENTRY comes from my successor, it means a new node has joined him
+    if(who == FROM_SUCC) { // If ENTRY comes from my successor, it means a new node has joined him
 
 
         sprintf(message, "SUCC %s %s %s\n", id_str, ip, port);
@@ -341,7 +357,7 @@ int process_ENTRY(node_information * node_info, char buffer[BUFFER_SIZE], int wh
         n = write(node_info->succ_fd, message, 128); //PRED l\n
         if (n == -1) exit(1);
 
-    } else if(whofrom == 0) { // Message comes from random node
+    } else if(who == FROM_TEMP) { // Message comes from random node
 
         if((node_info->succ_id == node_info->id ) || (node_info->pred_id == node_info->id)){ // only one node in ring
 
@@ -414,7 +430,7 @@ int process_ENTRY(node_information * node_info, char buffer[BUFFER_SIZE], int wh
         if (n == -1) exit(1);
 
 
-    } else if(whofrom == -1) {
+    } else if(who == FROM_PRED) { // Comes from predecessor
 
 
         if(node_info->pred_id == node_info->id){
@@ -427,7 +443,7 @@ int process_ENTRY(node_information * node_info, char buffer[BUFFER_SIZE], int wh
 
 }
 
-int process_SUCC(node_information * node_info, char buffer[BUFFER_SIZE],int whofrom){
+int process_SUCC(node_information * node_info, char buffer[BUFFER_SIZE], whofrom who){
 
     int id;
     char ip[INET_ADDRSTRLEN];
@@ -445,7 +461,7 @@ int process_SUCC(node_information * node_info, char buffer[BUFFER_SIZE],int whof
 
     idtostr(id, id_str);
 
-    if (whofrom == 1) { // comming from my successor
+    if (who == FROM_SUCC) { // comming from my successor
         printf("Set node %s as second successor...\n", id_str);
         node_info->ss_id = id;
         strcpy(node_info->ss_ip, ip);
@@ -457,7 +473,7 @@ int process_SUCC(node_information * node_info, char buffer[BUFFER_SIZE],int whof
 
 }
 
-int process_PRED(node_information * node_info, char buffer[BUFFER_SIZE], int whofrom){
+int process_PRED(node_information * node_info, char buffer[BUFFER_SIZE], whofrom who){
     
     
     int id;
@@ -476,7 +492,7 @@ int process_PRED(node_information * node_info, char buffer[BUFFER_SIZE], int who
 
     idtostr(id, id_str);
 
-    if (whofrom == 0) { // random node (temp)
+    if (who == FROM_TEMP) { // random node (temp)
         printf("Set node %s as predecessor...\n", id_str);
         node_info->pred_id = id;
         node_info->pred_fd = node_info->temp_fd;
@@ -495,7 +511,7 @@ int process_PRED(node_information * node_info, char buffer[BUFFER_SIZE], int who
 
     }
 
-    if (whofrom == 1) { // coming from sucessor, only happens if there are only 2 nodes in ring
+    if (who == FROM_SUCC) { // coming from sucessor, only happens if there are only 2 nodes in ring
         printf("Set node %s as predecessor...\n", id_str);
         node_info->pred_id = node_info->succ_id;
         strcpy(node_info->pred_ip, node_info->succ_ip);
@@ -504,4 +520,55 @@ int process_PRED(node_information * node_info, char buffer[BUFFER_SIZE], int who
     }
 
     return SUCCESS;
+}
+
+
+int process_ROUTE(node_information * node_info, char buffer[BUFFER_SIZE], whofrom who){
+
+    int id_source, id_dest;
+    char command[32], route[300], route_cpy[300];
+    char * token, *token2, tmp[300];
+    int n;
+
+    n = sscanf(buffer, "%s %d %d %s\n", command, &id_source, &id_dest, route);
+    if(n != 4){
+        printf("\x1b[33mError - Bad format...\x1b[0m\n");
+        return E_NON_FATAL;
+    }
+
+    //First we check if path is valid...
+    
+    strcpy(route_cpy, route);
+    
+    token = strtok(route_cpy, "\n");
+
+    strcpy(tmp, token);
+
+    token2 = strtok(tmp, "-");
+
+    while (token2 != NULL)
+    {
+
+        printf("%s\n", token2);
+
+        sscanf(token2, "%d", &n);
+
+        if(n == node_info->id) {
+            printf("> Invalid path recieved...\n");
+            return SUCCESS;
+        }
+
+        token2 = strtok(NULL, "-");
+
+    }
+    
+    token = strtok(route, "\n");
+
+    printf("%s\n %d %d\n", token, id_source, id_dest);
+
+    printf("%s\n", node_info->fwd_table[id_dest][id_source]);
+
+
+    return SUCCESS;
+
 }

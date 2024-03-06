@@ -30,6 +30,11 @@ typedef struct chord_information {
 typedef struct node_information
 {
 
+    //FORWARDING
+
+    char * fwd_table[100][100]; 
+    char * stp_table[100];
+    int    exp_table[100];
 
     //NODE SERVER//////////
     
@@ -71,7 +76,7 @@ typedef struct node_information
     pred_info pred;
 
     //Second successor's id
-    int ss_id;
+    int  ss_id;
     //Second successor's ip
     char ss_ip[INET_ADDRSTRLEN];
     //Second sucessor's port
@@ -83,7 +88,13 @@ typedef struct node_information
 
     //////CHORDS//////////
 
-    chord_information * chord_head;
+    // Chords connected to me
+    chord_information * chord_head; 
+
+    //Chord im connected to
+    int  chord_fd;
+    char chord_ip[INET_ADDRSTRLEN];
+    char chord_port[6];
 
     /////////////////////
 

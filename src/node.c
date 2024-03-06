@@ -39,9 +39,12 @@ node_information* init_node(char ippadr[INET_ADDRSTRLEN], char port[6], int id, 
     memset(tmp->temp_port, 0, sizeof(tmp->temp_port));
 
     tmp->chord_head = (chord_information*)malloc(sizeof(chord_information));
-
     tmp->chord_head->next = NULL;
     tmp->chord_head->chord_fd = -1;
+
+    tmp->chord_fd = -1;
+    memset(tmp->chord_ip, 0, sizeof(tmp->chord_ip));
+    memset(tmp->chord_port, 0, sizeof(tmp->chord_port));
 
 
     memset(tmp->ring_id_str, 0, sizeof(tmp->ring_id_str));
@@ -49,6 +52,11 @@ node_information* init_node(char ippadr[INET_ADDRSTRLEN], char port[6], int id, 
 
     tmp->ring_id_str[3] = '\0';
     tmp->id_str[2] = '\0';
+
+
+    memset(tmp->exp_table, 0, sizeof(tmp->exp_table));
+    memset(tmp->stp_table, 0, sizeof(tmp->stp_table));
+    memset(tmp->fwd_table, 0, sizeof(tmp->fwd_table));
 
     return tmp;
 }

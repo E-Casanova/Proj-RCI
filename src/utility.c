@@ -74,7 +74,12 @@ cor_interrupt wait_for_interrupt(node_information * node_info){
         FD_SET(node_info->temp_fd, &readfds);
         fdmax = node_info->temp_fd > fdmax ? node_info->temp_fd : fdmax;
     }
+    if(node_info->chord_fd > 0) {
+        FD_SET(node_info->chord_fd, &readfds);
+        fdmax = node_info->chord_fd > fdmax ? node_info->chord_fd : fdmax;
+    }
 
+    //ADICIONAR CORDAS
 
     //Add remaining file descriptors
 
@@ -114,6 +119,8 @@ cor_interrupt wait_for_interrupt(node_information * node_info){
             //Someone is trying to connect
             return I_NEW_CONNECTION;
         }
+
+
 
 
     }

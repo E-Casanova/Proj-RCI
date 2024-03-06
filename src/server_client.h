@@ -4,6 +4,16 @@
 
 #include "utility.h"
 
+typedef enum whofrom {
+
+    FROM_TEMP,
+    FROM_SUCC,
+    FROM_PRED,
+    FROM_CHORD
+
+} whofrom;
+
+
 /*
 *
 * Starts a TCP server and saves file descriptor in the node_information structure
@@ -50,11 +60,15 @@ int process_message_frompred(node_information * node_info);
 int process_message_fromsucc(node_information * node_info);
 
 
-int process_ENTRY(node_information * node_info, char buffer[BUFFER_SIZE], int whofrom);
+int process_ENTRY(node_information * node_info, char buffer[BUFFER_SIZE], whofrom who);
 
-int process_SUCC(node_information * node_info, char buffer[BUFFER_SIZE],int whofrom);
+int process_ROUTE(node_information * node_info, char buffer[BUFFER_SIZE], whofrom who);
 
-int process_PRED(node_information * node_info, char buffer[BUFFER_SIZE], int whofrom);
+int process_SUCC(node_information * node_info, char buffer[BUFFER_SIZE], whofrom who);
+
+int process_PRED(node_information * node_info, char buffer[BUFFER_SIZE], whofrom who);
+
+
 
 
 #endif
