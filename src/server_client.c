@@ -525,12 +525,13 @@ int process_PRED(node_information * node_info, char buffer[BUFFER_SIZE], whofrom
 
 int process_ROUTE(node_information * node_info, char buffer[BUFFER_SIZE], whofrom who){
 
-    int id_source, id_dest;
+    int id_neighbour, id_dest;
     char command[32], route[300], route_cpy[300];
     char * token, *token2, tmp[300];
-    int n;
+    int n, i, count1;
+    int n_hops;
 
-    n = sscanf(buffer, "%s %d %d %s\n", command, &id_source, &id_dest, route);
+    n = sscanf(buffer, "%s %d %d %s\n", command, &id_neighbour, &id_dest, route);
     if(n != 4){
         printf("\x1b[33mError - Bad format...\x1b[0m\n");
         return E_NON_FATAL;
@@ -546,10 +547,12 @@ int process_ROUTE(node_information * node_info, char buffer[BUFFER_SIZE], whofro
 
     token2 = strtok(tmp, "-");
 
+    n_hops = -1;
+
     while (token2 != NULL)
     {
 
-        printf("%s\n", token2);
+        //printf("%s\n", token2);
 
         sscanf(token2, "%d", &n);
 
@@ -558,16 +561,53 @@ int process_ROUTE(node_information * node_info, char buffer[BUFFER_SIZE], whofro
             return SUCCESS;
         }
 
+        n_hops++;
+
         token2 = strtok(NULL, "-");
 
     }
     
     token = strtok(route, "\n");
 
-    printf("%s\n %d %d\n", token, id_source, id_dest);
+    //printf("%s\n %d %d %d hops\n", token, id_neighbour, id_dest, n_hops);
 
-    printf("%s\n", node_info->fwd_table[id_dest][id_source]);
+    //MAYBE CHECK IF ROUTE IS VALID??? Probably impossible to do but can check if comes from neighbour
 
+    if(node_info->fwd_table[id_dest][id_neighbour][0] == '\0'){
+
+        sprintf(node_info->fwd_table[id_dest][id_neighbour], "%d-%s", node_info->id, route);
+
+        printf("Added entry to forwarding table with path: %s\n", node_info->fwd_table[id_dest][id_neighbour]);
+
+
+    } else {
+
+
+        sprintf(node_info->fwd_table[id_dest][id_neighbour], "%d-%s", node_info->id, route);
+
+        printf("Updated forwarding table entry with path: %s\n", node_info->fwd_table[id_dest][id_neighbour]);
+
+    }
+
+
+    //Now we check the shortest path table (stp)
+
+
+    if(node_info->stp_table[id_dest][0] == '\0') { // If it doesn't exist we add it
+
+        strcpy(node_info->stp_table[id_dest], node_info->fwd_table[id_dest][id_neighbour]);
+        printf("Added entry %d to stp table...\n", id_dest);
+
+    } else { // We have to count THE - !!! bruh.  Because 30-20-10 is a longer string than 1-2-3-4 but shorter path
+
+        for (i=0, count1=0; node_info->stp_table[id_dest][i]; i++) count1 += (node_info->stp_table[id_dest][i] == '-');
+
+        if(n_hops < count1) { //Means our new path is shorter
+            strcpy(node_info->stp_table[id_dest], node_info->fwd_table[id_dest][id_neighbour]);
+            printf("Replaced entry %d on stp table...\n", id_dest);
+        }
+
+    }
 
     return SUCCESS;
 

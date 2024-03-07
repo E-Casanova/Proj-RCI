@@ -32,8 +32,8 @@ typedef struct node_information
 
     //FORWARDING
 
-    char * fwd_table[100][100]; 
-    char * stp_table[100];
+    char   fwd_table[100][100][100]; // So much memory wasted but makes things a lot smoother
+    char   stp_table[100][100];
     int    exp_table[100];
 
     //NODE SERVER//////////

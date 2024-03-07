@@ -75,6 +75,8 @@ int main(int argc, char *argv[])
 
     node_information * app_node = init_node(argv[1], argv[2], 1, ns_ip, ns_port);
 
+    printf("Size of forwarding table: %ld\n", sizeof(app_node->fwd_table));
+
 
     printf("Starting app @%s:%s\n",app_node->ipaddr, app_node->port);
 
