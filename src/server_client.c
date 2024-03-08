@@ -598,17 +598,37 @@ int process_ROUTE(node_information * node_info, char buffer[BUFFER_SIZE], whofro
         strcpy(node_info->stp_table[id_dest], node_info->fwd_table[id_dest][id_neighbour]);
         printf("Added entry %d to stp table...\n", id_dest);
 
-    } else { // We have to count THE - !!! bruh.  Because 30-20-10 is a longer string than 1-2-3-4 but shorter path
+        //Gotta anounce it to all our neighbours, gonna write a function for that
+
+        return announce_shortest_path(node_info, node_info->stp_table[id_dest]);
+
+
+    } else { // We have to count THE '-' !!! bruh.  Because 30-20-10 is a longer string than 1-2-3-4 but shorter path
 
         for (i=0, count1=0; node_info->stp_table[id_dest][i]; i++) count1 += (node_info->stp_table[id_dest][i] == '-');
 
         if(n_hops < count1) { //Means our new path is shorter
             strcpy(node_info->stp_table[id_dest], node_info->fwd_table[id_dest][id_neighbour]);
             printf("Replaced entry %d on stp table...\n", id_dest);
+
+            //Gotta anounce it to all our neighbours, gonna write a function for that
+
+            return announce_shortest_path(node_info, node_info->stp_table[id_dest]);
         }
+
+
+        //if the path is longer we do nothing
 
     }
 
     return SUCCESS;
 
+}
+
+
+
+int announce_shortest_path(node_information * node_info, char path[BUFFER_SIZE]){
+
+
+    return SUCCESS;
 }

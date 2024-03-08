@@ -70,5 +70,7 @@ int process_PRED(node_information * node_info, char buffer[BUFFER_SIZE], whofrom
 
 
 
+int announce_shortest_path(node_information * node_info, char path[BUFFER_SIZE]);
+
 
 #endif
