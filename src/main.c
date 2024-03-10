@@ -107,18 +107,18 @@ int main(int argc, char *argv[])
             success = execute_user_command(app_node);
             break;
         case I_MESSAGE_PREDECESSOR:
-            printf("Incoming message from predecessor...\n");
+            //printf("Incoming message from predecessor...\n");
             success = process_message_frompred(app_node);
             break;
         case I_MESSAGE_SUCCESSOR:
-            printf("Incoming message from successor...\n");
+            //printf("Incoming message from successor...\n");
             success = process_message_fromsucc(app_node);
             break;
         case I_NEW_CONNECTION:
             printf("New connection inbound\n");
             success = accept_inbound_connection(app_node);
         case I_MESSAGE_TEMP:
-            printf("New message from temporary node\n");
+            printf("> New message from temporary node\n");
             success = process_message_fromtemp(app_node);
 
         default:
@@ -127,7 +127,7 @@ int main(int argc, char *argv[])
 
 
         if(success == UNKNOWN_COMMAND) {
-            printf("\x1b[33mUnknown Command\x1b[0m\n");
+            printf("\x1b[33m> Unknown Command\x1b[0m\n");
             printf("> ");
             fflush(stdout);
             continue;
@@ -151,6 +151,9 @@ int main(int argc, char *argv[])
         
 
         if(i != I_TIMEOUT) {
+            if(success == SUCCESS_HIDDEN) {
+                continue;
+            }
             printf("> ");
             fflush(stdout); 
         }

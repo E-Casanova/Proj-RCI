@@ -94,7 +94,7 @@ int process_message_fromtemp(node_information * node_info){
         return process_ROUTE(node_info, buffer, FROM_TEMP); //Not likely to happen and weird
     }
 
-    return SUCCESS;
+    return SUCCESS_HIDDEN;
 }
 
 int process_message_frompred(node_information * node_info){
@@ -109,10 +109,15 @@ int process_message_frompred(node_information * node_info){
     if( n == 0) {
         printf("\nConnection closed with predecessor: %s\n", node_info->pred_ip);
         close(node_info->pred_fd);
-        node_info->pred_id = -1;
         node_info->pred_fd = -1;
+
+        if(node_info->pred_id != node_info->succ_id) clear_id_from_tables(node_info, node_info->pred_id);
+
+        node_info->pred_id = -1;
         memset(node_info->pred_ip, 0, sizeof(node_info->pred_ip));
         memset(node_info->pred_port, 0, sizeof(node_info->pred_port));
+
+
 
 
         return SUCCESS;
@@ -132,7 +137,7 @@ int process_message_frompred(node_information * node_info){
 
     }
 
-    return SUCCESS;
+    return SUCCESS_HIDDEN;
 
 }
 
@@ -152,9 +157,14 @@ int process_message_fromsucc(node_information * node_info){
         idtostr(node_info->id, id_str);
 
         printf("\nConnection closed with successor: %s\n", node_info->succ_ip);
+        
         close(node_info->succ_fd);
-        node_info->succ_id = -1;
         node_info->succ_fd = -1;
+        
+        if(node_info->succ_id != node_info->pred_id) clear_id_from_tables(node_info, node_info->succ_id);
+
+        node_info->succ_id = -1;
+
         memset(node_info->succ_ip, 0, sizeof(node_info->succ_ip));
         memset(node_info->succ_port, 0, sizeof(node_info->succ_port));
 
@@ -238,7 +248,7 @@ int process_message_fromsucc(node_information * node_info){
         return process_ROUTE(node_info, buffer, FROM_SUCC);
     }
 
-    return SUCCESS;
+    return SUCCESS_HIDDEN;
 }
 
 
@@ -312,7 +322,6 @@ int process_ENTRY(node_information * node_info, char buffer[BUFFER_SIZE], whofro
     int n;
     char id_str[3];
 
-
     struct addrinfo hints, *res;
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_INET;
@@ -357,11 +366,21 @@ int process_ENTRY(node_information * node_info, char buffer[BUFFER_SIZE], whofro
         n = write(node_info->succ_fd, message, 128); //PRED l\n
         if (n == -1) exit(1);
 
+        if(node_info->ss_id != node_info->pred_id) clear_id_from_tables(node_info, node_info->ss_id);
+        
+
+        //Now send him all my spt table
+
+
+        send_stp_table(node_info, node_info->succ_fd);
+
+
+
     } else if(who == FROM_TEMP) { // Message comes from random node
 
         if((node_info->succ_id == node_info->id ) || (node_info->pred_id == node_info->id)){ // only one node in ring
 
-            printf("Only one node in ring...\n");
+            //printf("Only one node in ring...\n");
 
             node_info->ss_id = node_info->id;
 
@@ -389,7 +408,7 @@ int process_ENTRY(node_information * node_info, char buffer[BUFFER_SIZE], whofro
             n = getaddrinfo(node_info->succ_ip, node_info->succ_port, &hints, &res);
             if (n != 0) exit(1);
 
-            close(node_info->succ_fd);
+            //close(node_info->succ_fd);
 
             node_info->succ_fd = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -404,7 +423,13 @@ int process_ENTRY(node_information * node_info, char buffer[BUFFER_SIZE], whofro
             if (n == -1) exit(1);
 
 
-            return SUCCESS;
+
+            //Send him all my stp table
+
+            send_stp_table(node_info, node_info->pred_fd);
+
+
+            return SUCCESS_HIDDEN;
 
         }
         
@@ -413,7 +438,6 @@ int process_ENTRY(node_information * node_info, char buffer[BUFFER_SIZE], whofro
         n = write(node_info->pred_fd, buffer, 128);
         if (n == -1) exit(1);
 
-        node_info->pred_id = id;
         strcpy(node_info->pred_ip, ip);
         strcpy(node_info->pred_port, node_info->temp_port);
 
@@ -422,12 +446,22 @@ int process_ENTRY(node_information * node_info, char buffer[BUFFER_SIZE], whofro
 
         node_info->temp_fd = -1;
 
+        if(node_info->succ_id != node_info->pred_id) clear_id_from_tables(node_info, node_info->pred_id);
+
+        node_info->pred_id = id;
+
         idtostr(node_info->succ_id, id_str);
 
         sprintf(message, "SUCC %s %s %s\n", id_str, node_info->succ_ip, node_info->succ_port);
 
         n = write(node_info->pred_fd, message, 128);
         if (n == -1) exit(1);
+
+
+        //Send him all my spt table
+        
+        send_stp_table(node_info, node_info->pred_fd);
+
 
 
     } else if(who == FROM_PRED) { // Comes from predecessor
@@ -439,7 +473,7 @@ int process_ENTRY(node_information * node_info, char buffer[BUFFER_SIZE], whofro
 
     };
 
-    return SUCCESS;
+    return SUCCESS_HIDDEN;
 
 }
 
@@ -462,14 +496,14 @@ int process_SUCC(node_information * node_info, char buffer[BUFFER_SIZE], whofrom
     idtostr(id, id_str);
 
     if (who == FROM_SUCC) { // comming from my successor
-        printf("Set node %s as second successor...\n", id_str);
+        //printf("Set node %s as second successor...\n", id_str);
         node_info->ss_id = id;
         strcpy(node_info->ss_ip, ip);
         strcpy(node_info->ss_port, port);
     }
 
 
-    return SUCCESS;
+    return SUCCESS_HIDDEN;
 
 }
 
@@ -493,7 +527,7 @@ int process_PRED(node_information * node_info, char buffer[BUFFER_SIZE], whofrom
     idtostr(id, id_str);
 
     if (who == FROM_TEMP) { // random node (temp)
-        printf("Set node %s as predecessor...\n", id_str);
+        //printf("Set node %s as predecessor...\n", id_str);
         node_info->pred_id = id;
         node_info->pred_fd = node_info->temp_fd;
 
@@ -509,17 +543,20 @@ int process_PRED(node_information * node_info, char buffer[BUFFER_SIZE], whofrom
         n = write(node_info->pred_fd, buffer_to_send, BUFFER_SIZE);
         if( n == -1) exit(EXIT_FAILURE);
 
+        send_stp_table(node_info, node_info->pred_fd);
+
+
     }
 
     if (who == FROM_SUCC) { // coming from sucessor, only happens if there are only 2 nodes in ring
-        printf("Set node %s as predecessor...\n", id_str);
+        //printf("Set node %s as predecessor...\n", id_str);
         node_info->pred_id = node_info->succ_id;
         strcpy(node_info->pred_ip, node_info->succ_ip);
         strcpy(node_info->pred_port, node_info->succ_port);
 
     }
 
-    return SUCCESS;
+    return SUCCESS_HIDDEN;
 }
 
 
@@ -532,11 +569,21 @@ int process_ROUTE(node_information * node_info, char buffer[BUFFER_SIZE], whofro
     int n_hops;
 
     n = sscanf(buffer, "%s %d %d %s\n", command, &id_neighbour, &id_dest, route);
-    if(n != 4){
+    if((n > 4) || (n < 3)){
         printf("\x1b[33mError - Bad format...\x1b[0m\n");
         return E_NON_FATAL;
     }
 
+    if(n == 3) { // this means we get a clear route instruction, the path is no longer valid, im just going to assume the node does not exist anymore
+        memset(route, 0, 300); // the assumption was retarded
+        route[0] = '-';
+
+        memset(node_info->fwd_table[id_dest][id_neighbour], 0, 100);
+
+        //maybe remove from the others too lol
+
+        return SUCCESS_HIDDEN;
+    }
     //First we check if path is valid...
     
     strcpy(route_cpy, route);
@@ -557,8 +604,8 @@ int process_ROUTE(node_information * node_info, char buffer[BUFFER_SIZE], whofro
         sscanf(token2, "%d", &n);
 
         if(n == node_info->id) {
-            printf("> Invalid path recieved...\n");
-            return SUCCESS;
+            //printf("> Invalid path recieved...\n");
+            return SUCCESS_HIDDEN;
         }
 
         n_hops++;
@@ -571,13 +618,14 @@ int process_ROUTE(node_information * node_info, char buffer[BUFFER_SIZE], whofro
 
     //printf("%s\n %d %d %d hops\n", token, id_neighbour, id_dest, n_hops);
 
-    //MAYBE CHECK IF ROUTE IS VALID??? Probably impossible to do but can check if comes from neighbour
+    //MAYBE CHECK IF ROUTE EXISTS??? Probably impossible to do but can check if comes from neighbour
 
     if(node_info->fwd_table[id_dest][id_neighbour][0] == '\0'){
 
         sprintf(node_info->fwd_table[id_dest][id_neighbour], "%d-%s", node_info->id, route);
+        
 
-        printf("Added entry to forwarding table with path: %s\n", node_info->fwd_table[id_dest][id_neighbour]);
+        //printf("Added entry to forwarding table with path: %s\n", node_info->fwd_table[id_dest][id_neighbour]);
 
 
     } else {
@@ -585,7 +633,7 @@ int process_ROUTE(node_information * node_info, char buffer[BUFFER_SIZE], whofro
 
         sprintf(node_info->fwd_table[id_dest][id_neighbour], "%d-%s", node_info->id, route);
 
-        printf("Updated forwarding table entry with path: %s\n", node_info->fwd_table[id_dest][id_neighbour]);
+        //printf("Updated forwarding table entry with path: %s\n", node_info->fwd_table[id_dest][id_neighbour]);
 
     }
 
@@ -596,24 +644,33 @@ int process_ROUTE(node_information * node_info, char buffer[BUFFER_SIZE], whofro
     if(node_info->stp_table[id_dest][0] == '\0') { // If it doesn't exist we add it
 
         strcpy(node_info->stp_table[id_dest], node_info->fwd_table[id_dest][id_neighbour]);
-        printf("Added entry %d to stp table...\n", id_dest);
+        printf("> Added entry %d on stp table with %s\n", id_dest, node_info->stp_table[id_dest]);
+
+
+        //Update expedition table
+
+        node_info->exp_table[id_dest] = id_neighbour;
 
         //Gotta anounce it to all our neighbours, gonna write a function for that
 
-        return announce_shortest_path(node_info, node_info->stp_table[id_dest]);
+        return announce_shortest_path(node_info, node_info->stp_table[id_dest], node_info->id, id_dest);
 
 
     } else { // We have to count THE '-' !!! bruh.  Because 30-20-10 is a longer string than 1-2-3-4 but shorter path
 
         for (i=0, count1=0; node_info->stp_table[id_dest][i]; i++) count1 += (node_info->stp_table[id_dest][i] == '-');
 
-        if(n_hops < count1) { //Means our new path is shorter
+        if(n_hops < (count1 - 1)) { //Means our new path is shorter, we have to discount the extra - added before
             strcpy(node_info->stp_table[id_dest], node_info->fwd_table[id_dest][id_neighbour]);
-            printf("Replaced entry %d on stp table...\n", id_dest);
+            printf("> Replaced entry %d on stp table with %s\n", id_dest, node_info->stp_table[id_dest]);
+
+            //Update expedition table
+
+            node_info->exp_table[id_dest] = id_neighbour;
 
             //Gotta anounce it to all our neighbours, gonna write a function for that
 
-            return announce_shortest_path(node_info, node_info->stp_table[id_dest]);
+            return announce_shortest_path(node_info, node_info->stp_table[id_dest], node_info->id, id_dest);
         }
 
 
@@ -621,14 +678,123 @@ int process_ROUTE(node_information * node_info, char buffer[BUFFER_SIZE], whofro
 
     }
 
-    return SUCCESS;
+    return SUCCESS_HIDDEN;
 
 }
 
 
 
-int announce_shortest_path(node_information * node_info, char path[BUFFER_SIZE]){
+int announce_shortest_path(node_information * node_info, char path[BUFFER_SIZE], int start, int end){
+
+
+    char buffer_out[BUFFER_SIZE];
+    int n; 
+
+    sprintf(buffer_out, "ROUTE %d %d %s\n", start, end, path); //We format the message to send to all our neighbours
+
+
+    if((node_info->succ_fd != -1) && (node_info->succ_id != node_info->id)) {
+
+        n = write(node_info->succ_fd, buffer_out, BUFFER_SIZE); // tell it to my successor
+        if(n == -1) return E_FATAL;
+    }
+
+    if((node_info->pred_fd != -1) && (node_info->pred_id != node_info->id)) {
+
+        n = write(node_info->pred_fd, buffer_out, BUFFER_SIZE); // tell it to my predecessor
+        if(n == -1) return E_FATAL;
+
+    }
+
+
+    if((node_info->chord_fd != -1) && (node_info->chord_id != node_info->id)) {
+
+        n = write(node_info->chord_fd, buffer_out, BUFFER_SIZE); // tell it to the chord that's connected to me
+        if(n == -1) return E_FATAL;
+
+    }
+    
+    chord_information * tmp = node_info->chord_head; // tell it to all the chords connected to me
+
+    while (tmp != NULL)
+    {
+        if(tmp->chord_fd != -1) {
+            n = write(tmp->chord_fd, buffer_out, BUFFER_SIZE); // tell it to the chord that's connected to me
+            if(n == -1) return E_FATAL;
+        }
+
+        tmp = tmp->next;
+    }
+    
 
 
     return SUCCESS;
+}
+
+
+
+void send_stp_table(node_information * node_info, int fd){
+
+    char message[BUFFER_SIZE];
+    int n;
+
+    for(int i = 0; i < 100; i++){
+        if(node_info->stp_table[i][0] != '\0') {
+            sprintf(message, "ROUTE %d %d %s", node_info->id, i, node_info->stp_table[i]);
+            n = write(fd, message, BUFFER_SIZE); // Spam routes to my predecessor because i just established a connection
+            if (n == -1) exit(1);
+        }
+    }
+}
+
+void clear_id_from_tables(node_information * node_info, int id){
+
+    int min = 100, pos = -1, count1;
+    char buffer[128];
+    memset(buffer, 0, BUFFER_SIZE);
+
+
+    for(int i = 0; i < 100; i++) {
+
+        if((node_info->fwd_table[i][id][0] != '\0') && (strcmp(node_info->fwd_table[i][id], node_info->stp_table[i]) == 0)){
+
+            for(int j = 0; j < 100; j++) {
+                if(node_info->fwd_table[i][j][0] == '\0') continue;
+
+                count1 = 0;
+
+                if(j == i) continue;
+
+                for (int k=0; node_info->fwd_table[i][j][k]; k++) {
+                     count1 += (node_info->fwd_table[i][j][k] == '-');
+                }
+                if( count1 < min ){
+                    min = count1;
+                    pos = j;
+                } 
+
+            }
+
+            if (pos == -1) { // we found no path
+                memset(node_info->stp_table[id], 0, 100);
+                node_info->exp_table[id] = 0;
+                announce_shortest_path(node_info, buffer, node_info->id, id);
+            }
+
+            if( pos > -1) {
+                strcpy(node_info->stp_table[id], node_info->fwd_table[i][pos]);
+                node_info->exp_table[id] = pos;
+                announce_shortest_path(node_info, node_info->stp_table[id], node_info->id, id);
+            }
+
+        }
+
+            memset(node_info->fwd_table[i][id], 0, 100);
+        }
+
+        for(int i = 0; i < 100; i++) {
+            if(node_info->exp_table[i] == id) node_info->exp_table[i] = 0;
+        }
+    
+
 }

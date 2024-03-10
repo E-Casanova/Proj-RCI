@@ -43,7 +43,8 @@ typedef enum status {
     E_FATAL = -1,
     E_NON_FATAL = -2,
     SUCCESS = 1,
-    UNKNOWN_COMMAND = 2
+    UNKNOWN_COMMAND = 2,
+    SUCCESS_HIDDEN = 3
 } status;
 
 

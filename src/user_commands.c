@@ -68,6 +68,73 @@ int execute_user_command(node_information *node_info){
 
         }
 
+    if(strncmp("show routing ", buffer, 13) == 0 || strncmp("sr ", buffer, 3) == 0
+        || strncmp("show routing\n", buffer, 13) == 0 || strncmp("sr\n", buffer, 3) == 0)
+        {
+            //encaminhamento em portugues é forwarding mas ok
+
+            char cmd[32];
+            int dest_id;
+
+            int status = sscanf(buffer, "%s %d", cmd, &dest_id);
+            if(status != 2 || (dest_id > 99) || (dest_id < 0))
+            {
+                printf("Incorrect use of command show routing: show routing dest[0-99]\n");
+                return SUCCESS;
+            }
+
+
+            printf("\x1b[36m> ---- ROUTES TO NODE %d ---- \x1b[0m\n", dest_id);
+            for(int i = 0; i < 100; i++){
+                if(node_info->fwd_table[dest_id][i][0] != '\0') printf("\x1b[36m> %s \x1b[0m\n",node_info->fwd_table[dest_id][i]);
+            }
+
+            return SUCCESS;
+
+        }
+        
+    if(strncmp("show path ", buffer, 10) == 0 || strncmp("sp ", buffer, 3) == 0
+        || strncmp("show path\n", buffer, 13) == 0 || strncmp("sp\n", buffer, 3) == 0)
+        {
+            //encaminhamento em portugues é forwarding mas ok
+
+            char cmd[32];
+            int dest_id;
+
+            int status = sscanf(buffer, "%s %d", cmd, &dest_id);
+            if(status != 2 || (dest_id > 99) || (dest_id < 0))
+            {
+                printf("Incorrect use of command show path: show path dest[0-99]\n");
+                return SUCCESS;
+            }
+
+
+            printf("\x1b[36m> ---- SHORTEST PATH TO NODE %d ---- \x1b[0m\n", dest_id);
+            if(node_info->stp_table[dest_id][0] != '\0'){
+                 printf("\x1b[36m> %s \x1b[0m\n",node_info->stp_table[dest_id]);
+            } else {
+                printf("\x1b[36m> NO PATH AVAILABE \x1b[0m\n");
+            }
+
+
+            return SUCCESS;
+
+        }
+
+    if(strncmp("show forwarding ", buffer, 16) == 0 || strncmp("sf ", buffer, 3) == 0
+        || strncmp("show forwarding\n", buffer, 16) == 0 || strncmp("sf\n", buffer, 3) == 0)
+        {
+            
+            printf("\x1b[36m> ---- EXPEDITION TABLE ---- \x1b[0m\n");
+
+            for(int i = 0; i < 100; i++) {
+                if(node_info->exp_table[i] > 0) printf("\x1b[36m> %d %d\x1b[0m\n", i, node_info->exp_table[i]);
+            }
+
+            return SUCCESS;
+
+        }
+
 
     if(strncmp("direct join ", buffer, 12) == 0 || strncmp("dj ", buffer, 3) == 0
         || strncmp("direct join\n", buffer, 5) == 0 || strncmp("dj\n", buffer, 2) == 0)
@@ -104,6 +171,9 @@ int execute_user_command(node_information *node_info){
         || strncmp("leave ", buffer, 6) == 0 || strncmp("l ", buffer, 2) == 0)
     {
 
+
+        //CLEAN THE ROUTING TABLES
+
         char buffer_out[BUFFER_SIZE], buffer_in[BUFFER_SIZE];
         struct addrinfo hints, *res;
         struct sockaddr_in addr;
@@ -134,9 +204,13 @@ int execute_user_command(node_information *node_info){
         n = recvfrom(node_info->ns_fd, buffer_in, sizeof(buffer_in), 0, (struct sockaddr*)&addr, &addrlen);
 
         if(strncmp(buffer_in, "OKUNREG", 7) != 0) {
-            printf("\x1b[33mInvalid UNREG response...\x1b[0m\n");
+            printf("\x1b[33m>Invalid UNREG response...\x1b[0m\n");
             return E_NON_FATAL;
         }
+
+        memset(node_info->exp_table, 0, sizeof(node_info->exp_table));
+        memset(node_info->stp_table, 0, sizeof(node_info->stp_table));
+        memset(node_info->fwd_table, 0, sizeof(node_info->fwd_table));
 
         if(node_info->succ_fd != -1) close(node_info->succ_fd); //Close the succ connection if it exists
 
@@ -432,18 +506,21 @@ int direct_join(node_information * node_info, int node_id, int succ_id, char suc
         printf("\x1b[34m> Connection accepted from %s:%s (myself)\x1b[0m\n", node_info->pred_ip, node_info->pred_port);
     }
 
-
-    node_info->id = node_id;
     node_info->succ_id = succ_id;
     strcpy(node_info->succ_ip, succ_ip);
     strcpy(node_info->succ_port, succ_tcp);
 
-
+    sprintf(node_info->stp_table[node_id], "%d", node_id);
 
     sprintf(buffer, "ENTRY %s %s %s\n", id_str, node_info->ipaddr, node_info->port);
 
     int n = write(node_info->succ_fd,buffer, 128);
     if (n == -1) return E_FATAL;
 
-    return 1;
+
+    //send the spt table to the guy
+
+    send_stp_table(node_info, node_info->succ_fd);
+
+    return SUCCESS;
 }

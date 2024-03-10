@@ -32,9 +32,9 @@ typedef struct node_information
 
     //FORWARDING
 
-    char   fwd_table[100][100][100]; // So much memory wasted but makes things a lot smoother
-    char   stp_table[100][100];
-    int    exp_table[100];
+    char   fwd_table[100][100][100]; // fwd_table[dest][neighbour]
+    char   stp_table[100][100]; // stp_table[dest]
+    int    exp_table[100]; // exp_table[dest]
 
     //NODE SERVER//////////
     
@@ -93,6 +93,7 @@ typedef struct node_information
 
     //Chord im connected to
     int  chord_fd;
+    int  chord_id;
     char chord_ip[INET_ADDRSTRLEN];
     char chord_port[6];
 

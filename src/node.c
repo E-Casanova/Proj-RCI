@@ -43,6 +43,7 @@ node_information* init_node(char ippadr[INET_ADDRSTRLEN], char port[6], int id, 
     tmp->chord_head->chord_fd = -1;
 
     tmp->chord_fd = -1;
+    tmp->chord_id = -1;
     memset(tmp->chord_ip, 0, sizeof(tmp->chord_ip));
     memset(tmp->chord_port, 0, sizeof(tmp->chord_port));
 
