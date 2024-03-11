@@ -68,6 +68,9 @@ int process_SUCC(node_information * node_info, char buffer[BUFFER_SIZE], whofrom
 
 int process_PRED(node_information * node_info, char buffer[BUFFER_SIZE], whofrom who);
 
+int process_CHAT(node_information * node_info, char buffer[CHAT_BUFFER_SIZE]);
+
+
 
 
 int announce_shortest_path(node_information * node_info, char path[BUFFER_SIZE], int start, int end);

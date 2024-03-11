@@ -5,8 +5,8 @@
 
 int execute_user_command(node_information *node_info){
 
-    char buffer[128];
-    char * out = fgets(buffer, sizeof(buffer), stdin); 
+    char buffer[BUFFER_SIZE];
+    char * out = fgets(buffer, BUFFER_SIZE, stdin); 
     int errcode;
 
     if(buffer != out) return -1;
@@ -38,6 +38,11 @@ int execute_user_command(node_information *node_info){
         if (strnlen_2(ring_id, 3) != 3 || strnlen_2(node_id, 2) != 2) {
             printf("\x1b[33mInvalid: ring_id must have exactly 3 characters and node_id must have exactly 2 characters.\x1b[0m\n");
             return SUCCESS;
+        }
+
+        if(node_info->succ_fd != -1) {
+            printf("\x1b[33mNode already running on this app...\x1b[0m\n");
+            return E_NON_FATAL;
         }
 
         errcode = join(node_info, ring_id, node_id);
@@ -153,7 +158,7 @@ int execute_user_command(node_information *node_info){
 
         if(status != 5 || (node_id < 0 || node_id > 99) || (succ_id < 0 || succ_id > 99) || (isip(succ_ip) != 1 || (isport(succ_port) != 1))){
             printf("Incorrect use of command direct join: direct join id[0-99] succid[0-99] succIP[ipv4] succTCP[0-65535]\n");
-            return 1;
+            return SUCCESS;
         }
 
         if(node_info->succ_fd != -1) {
@@ -164,6 +169,75 @@ int execute_user_command(node_information *node_info){
         errcode = direct_join(node_info, node_id, succ_id, succ_ip, succ_port);
 
         return errcode;
+
+    }
+
+    if(strncmp("message\n", buffer, 8) == 0 || strncmp("m\n", buffer, 2) == 0
+        || strncmp("message ", buffer, 8) == 0 || strncmp("m ", buffer, 2) == 0)
+    {
+
+        int from = node_info->id;
+        int dest, status, next_node, n;
+        char message[128], cmd[32];
+        char sent[CHAT_BUFFER_SIZE];
+
+        status = sscanf(buffer, "%s %d %[^\n]s", cmd, &dest, message);
+
+        if(status != 3 || (dest < 0 || dest > 99)){
+            printf("Incorrect use of command message: message (m) dest[0-99] message\n");
+            return SUCCESS;
+        }
+
+        if(dest == node_info->id) {
+            printf("\x1b[33m> You are messaging yourself...\x1b[0m\n");
+            return E_NON_FATAL;
+        }
+
+        next_node = node_info->exp_table[dest];
+
+        if(next_node <= 0) {
+            printf("\x1b[33m> No path to destination id: %d\x1b[0m\n", dest);
+            return E_NON_FATAL;
+        }
+
+        sprintf(sent, "CHAT %d %d %s\n", from, dest, message);
+
+        if(next_node == node_info->succ_id){
+            n = write(node_info->succ_fd, sent, CHAT_BUFFER_SIZE);
+            if(n == -1) exit(EXIT_FAILURE);
+            printf("\x1b[32m> Sent...\x1b[0m\n");
+            return SUCCESS;
+        }
+
+        if(next_node == node_info->pred_id){
+            n = write(node_info->pred_fd, sent, CHAT_BUFFER_SIZE);
+            if(n == -1) exit(EXIT_FAILURE);
+            printf("\x1b[32m> Sent...\x1b[0m\n");
+            return SUCCESS;
+        }
+
+        chord_information * tmp;
+
+        tmp = node_info->chord_head;
+
+        while (tmp != NULL)
+        {
+            if((tmp->chord_id == next_node) && (tmp->chord_fd != -1)){
+                n = write(tmp->chord_fd, sent, CHAT_BUFFER_SIZE);
+                if(n == -1) exit(EXIT_FAILURE);
+                printf("\x1b[32m> Sent...\x1b[0m\n");
+                return SUCCESS;
+            }
+
+            tmp = tmp->next;
+
+        }
+        
+
+  
+        printf("\x1b[33m> Message was not sent\x1b[0m\n");
+        return E_NON_FATAL;
+
 
     }
 

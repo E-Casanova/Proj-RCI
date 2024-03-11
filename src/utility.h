@@ -22,7 +22,8 @@
 #include <sys/types.h>
 #include <netdb.h>
 
-#define BUFFER_SIZE 128
+#define BUFFER_SIZE 300
+#define CHAT_BUFFER_SIZE 300
 
 
 typedef enum interrupt {

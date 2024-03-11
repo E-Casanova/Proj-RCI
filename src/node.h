@@ -19,6 +19,7 @@ typedef struct pred_info {
 
 typedef struct chord_information {
 
+    int chord_id;
     int chord_fd;
     char chord_ip[INET_ADDRSTRLEN];
     char chord_port[6];

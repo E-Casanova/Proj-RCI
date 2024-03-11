@@ -154,6 +154,7 @@ int main(int argc, char *argv[])
 
         if(i != I_TIMEOUT) {
             if(success == SUCCESS_HIDDEN) {
+                fflush(stdout);
                 continue;
             }
             printf("> ");
