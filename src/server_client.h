@@ -72,6 +72,8 @@ int process_PRED(node_information * node_info, char buffer[BUFFER_SIZE], whofrom
 
 int announce_shortest_path(node_information * node_info, char path[BUFFER_SIZE], int start, int end);
 
+int announce_shortest_path_neighbour(node_information * node_info, char path[BUFFER_SIZE], int start, int end, int fd);
+
 void send_stp_table(node_information * node_info, int fd);
 
 void clear_id_from_tables(node_information * node_info, int id);

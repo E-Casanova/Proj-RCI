@@ -268,7 +268,7 @@ int execute_user_command(node_information *node_info){
 
 int join(node_information * node_info, char ring_id[3], char node_id[2]){
 
-    char buffer_out[32] , buffer_in[BUFFER_SIZE], tmp[BUFFER_SIZE];
+    char buffer_out[32] , buffer_in[1000], tmp[1000]; // nodeslist is huge sometimes
     struct sockaddr_in addr;
     socklen_t addrlen;
     struct addrinfo hints, *res;
@@ -470,7 +470,7 @@ int join(node_information * node_info, char ring_id[3], char node_id[2]){
 
 int direct_join(node_information * node_info, int node_id, int succ_id, char succ_ip[INET_ADDRSTRLEN], char succ_tcp[6]){
 
-    char buffer[128];
+    char buffer[BUFFER_SIZE];
     char connection_ip[INET_ADDRSTRLEN];
     struct sockaddr addr;
     socklen_t addrlen = sizeof(addr);
@@ -514,7 +514,7 @@ int direct_join(node_information * node_info, int node_id, int succ_id, char suc
 
     sprintf(buffer, "ENTRY %s %s %s\n", id_str, node_info->ipaddr, node_info->port);
 
-    int n = write(node_info->succ_fd,buffer, 128);
+    int n = write(node_info->succ_fd,buffer, BUFFER_SIZE);
     if (n == -1) return E_FATAL;
 
 

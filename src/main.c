@@ -75,10 +75,10 @@ int main(int argc, char *argv[])
 
     node_information * app_node = init_node(argv[1], argv[2], 1, ns_ip, ns_port);
 
-    printf("Size of forwarding table: %ld\n", sizeof(app_node->fwd_table));
+    //printf("Size of forwarding table: %ld\n bytes", sizeof(app_node->fwd_table));
 
 
-    printf("Starting app @%s:%s\n",app_node->ipaddr, app_node->port);
+    printf("\x1b[32m> Starting app @%s:%s\x1b[0m\n",app_node->ipaddr, app_node->port);
 
     if (app_node == NULL) exit(1);
 
@@ -116,9 +116,11 @@ int main(int argc, char *argv[])
             break;
         case I_NEW_CONNECTION:
             printf("New connection inbound\n");
+            fflush(stdout);
             success = accept_inbound_connection(app_node);
         case I_MESSAGE_TEMP:
-            printf("> New message from temporary node\n");
+            printf("> New message from temporary node\n> ");
+            fflush(stdout);
             success = process_message_fromtemp(app_node);
 
         default:
