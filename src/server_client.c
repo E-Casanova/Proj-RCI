@@ -833,7 +833,7 @@ int process_CHAT(node_information * node_info, char buffer[CHAT_BUFFER_SIZE]){
         return SUCCESS;
     }
 
-    if(next_node == node_info->succ_id){
+    if(next_node == node_info->pred_id){
         n = write(node_info->pred_fd, sent, CHAT_BUFFER_SIZE);
         if(n == -1) exit(EXIT_FAILURE);
         printf("\x1b[32m> Sent...\x1b[0m\n");
