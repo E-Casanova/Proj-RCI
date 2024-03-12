@@ -31,7 +31,7 @@ int start_server_TCP(node_information * node_info);
 * @returns 1 if success
 *
 */
-int start_client_successor(char succ_ip[INET_ADDRSTRLEN], char port[6], node_information * node_info);
+int start_client_TCP(char succ_ip[INET_ADDRSTRLEN], char port[6], node_information * node_info);
 
 
 /*
@@ -59,6 +59,10 @@ int process_message_frompred(node_information * node_info);
 
 int process_message_fromsucc(node_information * node_info);
 
+int process_message_fromchord_in(node_information * node_info);
+
+int process_message_fromchord_out(node_information * node_info);
+
 
 int process_ENTRY(node_information * node_info, char buffer[BUFFER_SIZE], whofrom who);
 
@@ -70,6 +74,7 @@ int process_PRED(node_information * node_info, char buffer[BUFFER_SIZE], whofrom
 
 int process_CHAT(node_information * node_info, char buffer[CHAT_BUFFER_SIZE]);
 
+int process_CHORD(node_information * node_info, char buffer[BUFFER_SIZE], whofrom who);
 
 
 

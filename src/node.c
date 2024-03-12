@@ -42,6 +42,7 @@ node_information* init_node(char ippadr[INET_ADDRSTRLEN], char port[6], int id, 
     tmp->chord_head->next = NULL;
     tmp->chord_head->chord_fd = -1;
     tmp->chord_head->chord_id = -1;
+    tmp->chord_head->active = 0;
 
     tmp->chord_fd = -1;
     tmp->chord_id = -1;

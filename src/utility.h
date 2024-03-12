@@ -13,6 +13,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <unistd.h>
 
 #include "node.h"
 
@@ -35,7 +36,9 @@ typedef enum interrupt {
     I_MESSAGE_SUCCESSOR,
     I_NEW_CONNECTION,
     I_TIMEOUT,
-    I_ERROR
+    I_ERROR,
+    I_MESSAGE_CHORD_IN,
+    I_MESSAGE_CHORD_OUT
 
 } cor_interrupt;
 

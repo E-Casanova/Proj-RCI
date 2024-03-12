@@ -45,7 +45,7 @@ cor_interrupt wait_for_interrupt(node_information * node_info){
 
     int fdmax = 0;
 
-    struct timeval TIMEOUT = { .tv_sec = 0, .tv_usec = 1000}; // 1ms
+    struct timeval TIMEOUT = { .tv_sec = 0, .tv_usec = 5000}; // 1ms
 
     //Initializing file descriptor set
     fd_set readfds;
@@ -80,6 +80,20 @@ cor_interrupt wait_for_interrupt(node_information * node_info){
     }
 
     //ADICIONAR CORDAS
+
+    chord_information * tmp = node_info->chord_head;
+
+    while (tmp != NULL)
+    {
+        if(tmp->chord_fd > 0) {
+            FD_SET(tmp->chord_fd, &readfds);
+            fdmax = tmp->chord_fd > fdmax ? tmp->chord_fd : fdmax;
+        }
+
+        tmp = tmp->next;
+
+    }
+    
 
     //Add remaining file descriptors
 
@@ -120,8 +134,27 @@ cor_interrupt wait_for_interrupt(node_information * node_info){
             return I_NEW_CONNECTION;
         }
 
+        if (node_info->chord_fd != -1 && FD_ISSET(node_info->chord_fd, &readfds)) {
+            //Chord is trying to speak
+            return I_MESSAGE_CHORD_OUT;
+        }
 
 
+        tmp = node_info->chord_head;
+
+        while (tmp != NULL)
+        {
+            if(tmp->chord_fd != -1 && FD_ISSET(tmp->chord_fd, &readfds)) {
+                //Chord is trying to speak
+
+                tmp->active = 1; // this means this one is the chord trying to speak, usefull when we have many connected to us
+
+                return I_MESSAGE_CHORD_IN;
+            }
+
+            tmp = tmp->next;
+
+        }
 
     }
 

@@ -19,6 +19,7 @@ typedef struct pred_info {
 
 typedef struct chord_information {
 
+    int active;
     int chord_id;
     int chord_fd;
     char chord_ip[INET_ADDRSTRLEN];
@@ -71,17 +72,18 @@ typedef struct node_information
     char pred_ip[INET_ADDRSTRLEN];
     //Predecessor TCP Port
     char pred_port[6];
-    //Predecessor's file descriptor
-    int pred_fd;
-    //Predecessor's address information
-    pred_info pred;
+    
+    int pred_fd;//Predecessor's file descriptor
+    
+    pred_info pred;    //Predecessor's address information
 
-    //Second successor's id
-    int  ss_id;
-    //Second successor's ip
-    char ss_ip[INET_ADDRSTRLEN];
-    //Second sucessor's port
-    char ss_port[6];
+
+    int  ss_id;    //Second successor's id
+
+    char ss_ip[INET_ADDRSTRLEN];    //Second successor's ip
+
+    
+    char ss_port[6];//Second sucessor's port
 
     int  temp_fd;
     char temp_ip[INET_ADDRSTRLEN];
@@ -89,12 +91,12 @@ typedef struct node_information
 
     //////CHORDS//////////
 
-    // Chords connected to me
-    chord_information * chord_head; 
+    
+    chord_information * chord_head; // Chords connected to me
 
-    //Chord im connected to
     int  chord_fd;
-    int  chord_id;
+    int  chord_id;    //Chord im connected to
+
     char chord_ip[INET_ADDRSTRLEN];
     char chord_port[6];
 

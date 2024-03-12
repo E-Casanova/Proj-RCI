@@ -7,6 +7,9 @@ int start_server_TCP(node_information * node_info){
     int fd, errcode;
     struct addrinfo hints,*res;
 
+    errcode = start_client_UDP(node_info->ns_ipaddr, node_info->ns_port, node_info);
+    if(errcode != 1) return E_FATAL;
+
     fd = socket(AF_INET, SOCK_STREAM, 0);
     if (fd == -1) exit(1);
 
@@ -57,7 +60,6 @@ int accept_inbound_connection(node_information * node_info){
 
     return SUCCESS;
 
-
 }
 
 int process_message_fromtemp(node_information * node_info){
@@ -88,10 +90,17 @@ int process_message_fromtemp(node_information * node_info){
 
         return process_PRED(node_info, buffer, FROM_TEMP); // Comes from someone trying to tell me they are now my predecessor
     }    
+
     if(strncmp(buffer, "ROUTE ", 6) == 0){
 
 
         return process_ROUTE(node_info, buffer, FROM_TEMP); //Not likely to happen and weird
+    }
+
+    if(strncmp(buffer, "CHORD ", 6) == 0){
+
+
+        return process_CHORD(node_info, buffer, FROM_TEMP); //Not likely to happen and weird
     }
 
     return SUCCESS_HIDDEN;
@@ -188,7 +197,7 @@ int process_message_fromsucc(node_information * node_info){
             socklen_t addrlen = sizeof(addr);
 
 
-            if(start_client_successor(node_info->succ_ip, node_info->succ_port, node_info) == - 1) {
+            if(start_client_TCP(node_info->succ_ip, node_info->succ_port, node_info) == E_NON_FATAL) {
                 printf("\x1b[33mError connecting to TCP server @ %s:%s\x1b[0m\n", node_info->succ_ip, node_info->succ_port);
                 return E_FATAL;
             }
@@ -216,7 +225,10 @@ int process_message_fromsucc(node_information * node_info){
         }
 
 
-        n = start_client_successor(node_info->succ_ip, node_info->succ_port, node_info);
+        if(start_client_TCP(node_info->succ_ip, node_info->succ_port, node_info) == E_NON_FATAL) {
+            printf("\x1b[33mError connecting to TCP server @ %s:%s\x1b[0m\n", node_info->succ_ip, node_info->succ_port);
+            return E_FATAL;
+        }
 
         sprintf(buffer, "PRED %s\n", id_str);
 
@@ -265,10 +277,99 @@ int process_message_fromsucc(node_information * node_info){
     return SUCCESS_HIDDEN;
 }
 
+int process_message_fromchord_out(node_information * node_info){
 
 
+    char buffer[BUFFER_SIZE];
 
-int start_client_successor(char succ_ip[INET_ADDRSTRLEN], char port[6], node_information * node_info){
+    int n = read(node_info->chord_fd, buffer, BUFFER_SIZE);
+    if (n == -1) return E_FATAL;
+
+    if(n == 0) {
+        printf("> Connection closed with chord: %s", node_info->chord_ip);
+
+        clear_id_from_tables(node_info, node_info->chord_id);
+
+        close(node_info->chord_fd);
+
+        node_info->chord_id = -1;
+        memset(node_info->chord_ip, 0, INET_ADDRSTRLEN);
+        memset(node_info->chord_port, 0, 6);
+        node_info->chord_fd = -1;
+
+        return SUCCESS;
+
+    }
+
+    printf("\n%s\n", buffer);
+
+    if(strncmp(buffer, "ROUTE ", 6) == 0){
+
+        return process_ROUTE(node_info, buffer, FROM_CHORD);
+    }
+
+    return SUCCESS_HIDDEN;
+
+}
+
+int process_message_fromchord_in(node_information * node_info){
+
+
+    char buffer[BUFFER_SIZE];
+
+    chord_information * tmp = node_info->chord_head;
+    chord_information * tmp2 = tmp; // this will lag behind the main pointer
+
+    tmp = tmp->next;
+
+    while (tmp != NULL)
+    {
+        if(tmp->active == 1) {
+            int n = read(tmp->chord_fd, buffer, BUFFER_SIZE);
+            if (n == -1) return E_FATAL;
+
+            tmp->active = 0;
+
+            if(n == 0) {
+                printf("> Connection closed with chord: %s\n", tmp->chord_ip);
+
+                clear_id_from_tables(node_info, tmp->chord_id);
+
+                close(tmp->chord_fd);
+
+                tmp->chord_id = -1;
+                memset(tmp->chord_ip, 0, INET_ADDRSTRLEN);
+                memset(tmp->chord_port, 0, 6);
+                tmp->chord_fd = -1;
+
+                tmp2->next = tmp->next;
+
+                free(tmp);
+
+                return SUCCESS;
+
+            }
+
+            printf("\n%s\n", buffer);
+
+            if(strncmp(buffer, "ROUTE ", 6) == 0){
+
+                return process_ROUTE(node_info, buffer, FROM_CHORD);
+            }
+
+            break;
+        }
+
+        tmp2 = tmp2->next;
+        tmp = tmp->next;
+    }
+
+    return SUCCESS_HIDDEN;
+
+}
+
+
+int start_client_TCP(char succ_ip[INET_ADDRSTRLEN], char port[6], node_information * node_info){
 
     int fd, errcode;
     ssize_t n;
@@ -291,16 +392,17 @@ int start_client_successor(char succ_ip[INET_ADDRSTRLEN], char port[6], node_inf
     errcode=getaddrinfo(succ_ip,port,&hints,&res);
     if( errcode!= 0) return -1;
 
+    n = connect(fd, res->ai_addr, res->ai_addrlen);
+    if (n == -1) {
+        errno = EWOULDBLOCK;
+        return E_NON_FATAL;
+    }
+
+
     node_info->succ.res = res;
     node_info->succ_fd = fd;
     strcpy(node_info->succ_ip , succ_ip);
     strcpy(node_info->succ_port , port);
-
-    n = connect(fd, res->ai_addr, res->ai_addrlen);
-    if (n == -1) {
-        errno = EWOULDBLOCK;
-        return -1;
-    }
 
     return SUCCESS_HIDDEN;
 }
@@ -863,6 +965,55 @@ int process_CHAT(node_information * node_info, char buffer[CHAT_BUFFER_SIZE]){
     return E_NON_FATAL;
 }
 
+
+int process_CHORD(node_information * node_info, char buffer[BUFFER_SIZE], whofrom who){
+
+
+    char cmd[32];
+    int id;
+    int n;
+
+    n = sscanf(buffer, "%s %d\n", cmd, &id);
+    if((n != 2)){
+        printf("\x1b[33mError - Bad format...\x1b[0m\n");
+        return E_NON_FATAL;
+    }
+
+    if(who == FROM_SUCC || who == FROM_PRED) return E_NON_FATAL; //weird stuff that will never happen, i will ignore it anyways
+
+    if(who == FROM_TEMP){
+
+        chord_information * tmp = (chord_information*)malloc(sizeof(chord_information));
+        chord_information * tmp2;
+
+        tmp->chord_fd = node_info->temp_fd;
+        tmp->chord_id = id;
+        tmp->active = 0;
+
+        strcpy(tmp->chord_ip, node_info->temp_ip);
+        strcpy(tmp->chord_port, node_info->temp_port);
+
+        node_info->temp_fd = -1;
+
+        tmp2 = node_info->chord_head;
+
+        while (tmp2->next != NULL)
+        {
+            tmp2 = tmp2->next;
+        }
+        
+        tmp2->next = tmp;
+
+        printf("> Set chord %i\n", tmp->chord_id);
+
+        send_stp_table(node_info, tmp->chord_fd);
+
+    }
+
+
+    return SUCCESS;
+
+}
 
 
 int announce_shortest_path(node_information * node_info, char path[BUFFER_SIZE], int start, int end){

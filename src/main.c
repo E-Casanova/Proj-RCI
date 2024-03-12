@@ -118,11 +118,22 @@ int main(int argc, char *argv[])
             printf("New connection inbound\n");
             fflush(stdout);
             success = accept_inbound_connection(app_node);
+            break;
         case I_MESSAGE_TEMP:
             printf("> New message from temporary node\n> ");
             fflush(stdout);
             success = process_message_fromtemp(app_node);
-
+            break;
+        case I_MESSAGE_CHORD_IN:
+            printf("> New message from chord\n");
+            fflush(stdout);
+            success = process_message_fromchord_in(app_node);
+            break;
+        case I_MESSAGE_CHORD_OUT:
+            printf("> New message from chord\n");
+            fflush(stdout);
+            success = process_message_fromchord_out(app_node);
+            break;
         default:
             break;
         }

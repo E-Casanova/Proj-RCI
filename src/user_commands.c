@@ -172,6 +172,78 @@ int execute_user_command(node_information *node_info){
 
     }
 
+    if(strncmp("chord\n", buffer, 6) == 0 || strncmp("c\n", buffer, 2) == 0
+        || strncmp("chord ", buffer, 6) == 0 || strncmp("c ", buffer, 2) == 0)
+    {
+
+        return chord(node_info);
+
+    }
+
+    if(strncmp("nl\n", buffer, 3) == 0 || strncmp("nl\n", buffer, 3) == 0
+        || strncmp("nl ", buffer, 3) == 0 || strncmp("nl ", buffer, 3) == 0)
+    {
+
+        char command[32], ring_id[3];
+        char buffer_out[32];
+        char buffer_in[BUFFER_SIZE];
+
+        sscanf(buffer, "%s %s", command, ring_id);
+    
+        struct sockaddr_in addr;
+        socklen_t addrlen;
+        struct addrinfo hints, *res;
+
+        int n;
+
+        memset(buffer_in, 0, BUFFER_SIZE);
+        memset(&hints, 0, sizeof(hints));
+        hints.ai_family = AF_INET;
+        hints.ai_socktype = SOCK_DGRAM;
+
+        if(node_info->ns_fd == -1) {
+            printf("\x1b[33m Not connected to node server...\x1b[0m\n");
+            return E_NON_FATAL;
+        }
+
+        int errcode = getaddrinfo(node_info->ns_ipaddr, node_info->ns_port, &hints, &res);
+        if(errcode != 0){
+            printf("Error: could not get node server address info from %s\n", node_info->ns_ipaddr);
+            fflush(stdout);
+            exit(EXIT_FAILURE);
+        } 
+
+
+
+        // The command to get the list of nodes
+        sprintf(buffer_out, "NODES %s", ring_id);
+
+        n = sendto(node_info->ns_fd, buffer_out, sizeof(buffer_out), 0, res->ai_addr, res->ai_addrlen);
+        if(n == -1) {
+            printf("Could not sendto %s:%s", node_info->ns_ipaddr, node_info->ns_port);
+            fflush(stdout);
+            return E_FATAL;
+        }
+
+        addrlen = sizeof(addr);
+        n = recvfrom(node_info->ns_fd, buffer_in, sizeof(buffer_in), 0, (struct sockaddr*)&addr, &addrlen);
+        if(n == -1){
+
+            if(errno == EAGAIN || errno == EWOULDBLOCK) {
+                printf("\x1b[33mNode Server timed out...\x1b[0m\n");
+                return E_NON_FATAL;
+            } else {
+                return E_FATAL;
+            }
+            
+        }
+
+        printf("\n%s\n", buffer_in);
+
+        return SUCCESS;
+
+    }
+
     if(strncmp("message\n", buffer, 8) == 0 || strncmp("m\n", buffer, 2) == 0
         || strncmp("message ", buffer, 8) == 0 || strncmp("m ", buffer, 2) == 0)
     {
@@ -310,6 +382,26 @@ int execute_user_command(node_information *node_info){
         memset(node_info->ss_ip, 0, sizeof(node_info->ss_ip));
         memset(node_info->ss_port, 0, sizeof(node_info->ss_port));
 
+        if(node_info->chord_fd != -1) close(node_info->chord_fd);
+
+        node_info->chord_fd = -1; 
+        node_info->chord_id = -1;
+        memset(node_info->chord_ip, 0, sizeof(node_info->chord_ip));
+        memset(node_info->chord_port, 0, sizeof(node_info->chord_port));
+
+        chord_information * tmp = node_info->chord_head->next;
+
+        while (tmp != NULL)
+        {
+
+            if(tmp->chord_fd > 0) close(tmp->chord_fd);
+            tmp->chord_fd = -1;
+
+            tmp = tmp->next;
+
+        }
+        
+
         printf("\x1b[32m> Successfully left ring %s\x1b[0m\n", node_info->ring_id_str);
 
         memset(node_info->ring_id_str, 0, sizeof(node_info->ring_id_str));
@@ -359,12 +451,14 @@ int join(node_information * node_info, char ring_id[3], char node_id[2]){
 
     node_id_int = atoi(node_id);
 
-    n = start_client_UDP(node_info->ns_ipaddr, node_info->ns_port, node_info);
-    if(n != 1) return E_FATAL;
-
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_DGRAM;
+
+    if(node_info->ns_fd == -1) {
+        printf("\x1b[33m Not connected to node server...\x1b[0m\n");
+        return E_NON_FATAL;
+    }
 
     int errcode = getaddrinfo(node_info->ns_ipaddr, node_info->ns_port, &hints, &res);
     if(errcode != 0){
@@ -535,9 +629,6 @@ int join(node_information * node_info, char ring_id[3], char node_id[2]){
         return E_NON_FATAL;
     }
 
-    close(node_info->ns_fd);
-    node_info->ns_fd = -1;
-
     return direct_join(node_info, node_id_int, succ_id, succ_ip, succ_tcp);
 
 }
@@ -557,7 +648,7 @@ int direct_join(node_information * node_info, int node_id, int succ_id, char suc
 
     //Start TCP client
 
-    if(start_client_successor(succ_ip, succ_tcp, node_info) == - 1) {
+    if(start_client_TCP(succ_ip, succ_tcp, node_info) == E_NON_FATAL) {
         printf("\x1b[33m> Error connecting to TCP server @ %s:%s\x1b[0m\n", succ_ip, succ_tcp);
         return E_FATAL;
     }
@@ -597,4 +688,191 @@ int direct_join(node_information * node_info, int node_id, int succ_id, char suc
     send_stp_table(node_info, node_info->succ_fd);
 
     return SUCCESS;
+}
+
+
+int chord(node_information * node_info){
+
+    char buffer_out[32];
+    char buffer_in[BUFFER_SIZE], tmp[BUFFER_SIZE];
+    char * token;
+
+    char ips[100][INET_ADDRSTRLEN], ports[100][6];
+
+    struct sockaddr_in addr;
+    socklen_t addrlen;
+    struct addrinfo hints, *res;
+
+    int ids[100];
+    int n, n_nodes = 0;
+
+    memset(ids, 0, sizeof(ids));
+    memset(buffer_in, 0, BUFFER_SIZE);
+    memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = SOCK_DGRAM;
+
+    //Let's ask the node server for the nodes list
+
+    if(node_info->ns_fd == -1) {
+        printf("\x1b[33m> Not connected to node server...\x1b[0m\n");
+        return E_NON_FATAL;
+    }
+
+    if(node_info->chord_fd != -1) {
+        printf("\x1b[33m> You already have a chord to node %d...\x1b[0m\n", node_info->chord_id);
+        return E_NON_FATAL;
+    }
+
+    n = getaddrinfo(node_info->ns_ipaddr, node_info->ns_port, &hints, &res);
+    if(n != 0){
+        printf("Error: could not get node server address info from %s\n", node_info->ns_ipaddr);
+        fflush(stdout);
+        exit(EXIT_FAILURE);
+    } 
+
+
+
+    // The command to get the list of nodes
+    sprintf(buffer_out, "NODES %s", node_info->ring_id_str);
+
+    n = sendto(node_info->ns_fd, buffer_out, sizeof(buffer_out), 0, res->ai_addr, res->ai_addrlen);
+    if(n == -1) {
+        printf("Could not sendto %s:%s", node_info->ns_ipaddr, node_info->ns_port);
+        fflush(stdout);
+        return E_FATAL;
+    }
+
+    addrlen = sizeof(addr);
+    n = recvfrom(node_info->ns_fd, buffer_in, sizeof(buffer_in), 0, (struct sockaddr*)&addr, &addrlen);
+    if(n == -1){
+
+        if(errno == EAGAIN || errno == EWOULDBLOCK) {
+            printf("\x1b[33mNode Server timed out...\x1b[0m\n");
+            return E_NON_FATAL;
+        } else {
+            return E_FATAL;
+        }
+        
+    }
+
+
+    strcpy(tmp, buffer_in);
+
+    token = strtok(buffer_in, "\n");
+
+    token = strtok(NULL, "\n"); // Skip over NODESLIST xxx
+
+    while (token != NULL)
+    {
+        
+        if(token[0] > '9' || token[0] < '0') {
+            token = NULL;
+            break;
+        }
+
+
+        n_nodes++;
+
+        sscanf(token, "%d %s %s", &n, ips[n_nodes - 1], ports[n_nodes - 1]);
+
+        ids[n_nodes-1] = n;
+
+        token = strtok(NULL, "\n");
+    }
+
+    if ( n_nodes < 4) {
+        printf("\x1b[33m> Not enough nodes in ring to create a chord...\x1b[0m\n");
+        return E_NON_FATAL;
+    }
+
+    for(int i = 0; i < n_nodes; i++) {
+        if(ids[i] == -1) break;
+
+
+
+        if((ids[i] != node_info->succ_id) && (ids[i] != node_info->pred_id) && (ids[i] != node_info->id))
+        {
+
+            int valid = 1;
+
+            chord_information * tmp = node_info->chord_head;
+            while (tmp != NULL)
+            {
+                if(tmp->chord_id == ids[i]) valid = 0;
+
+                tmp = tmp->next;
+            }
+
+            if(valid == 0) continue;
+            
+
+            node_info->chord_id = ids[i];
+
+            strcpy(node_info->chord_ip, ips[i]);
+            strcpy(node_info->chord_port, ports[i]);
+
+            break;
+        }
+
+    }
+
+    if(node_info->chord_id == -1) {
+        printf("\x1b[33m> Cannot create chord...\x1b[0m\n");
+        return E_NON_FATAL;
+    }
+    
+
+
+    //Now lets TRY to connect
+
+    int fd;
+    struct addrinfo hints_chord,*res_chord;
+
+    struct timeval timeout = {.tv_sec = 2 , .tv_usec = 0};
+
+
+    fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (fd == -1) exit(EXIT_FAILURE);
+    
+    setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, (const char*)&timeout, sizeof(timeout));
+
+    
+    memset(&hints_chord,0,sizeof hints_chord);
+    hints_chord.ai_family=AF_INET; //IPv4
+    hints_chord.ai_socktype=SOCK_STREAM; //TCP socket
+    hints_chord.ai_flags=AI_PASSIVE;
+
+    n = getaddrinfo(node_info->chord_ip, node_info->chord_port, &hints_chord, &res_chord);
+    if( n != 0) return -1;
+
+    n = connect(fd, res_chord->ai_addr, res_chord->ai_addrlen);
+    if (n == -1) {
+
+        node_info->chord_id = -1;
+        node_info->chord_fd = -1;
+
+        memset(node_info->chord_ip, 0, INET_ADDRSTRLEN);
+        memset(node_info->chord_port, 0, 6);
+
+        errno = EWOULDBLOCK;
+
+        printf("\x1b[33m Could not connect to chord: %s\x1b[0m\n", strerror(errno));
+
+        return E_NON_FATAL;
+    }
+
+    node_info->chord_fd = fd;
+
+    sprintf(buffer_out, "CHORD %s\n", node_info->id_str);
+
+    n = write(node_info->chord_fd, buffer_out, 32);
+
+    printf("\x1b[32m> Successfully created chord to node %d\x1b[0m\n", node_info->chord_id);
+
+    sleep(1);
+
+    send_stp_table(node_info, node_info->chord_fd);
+
+    return SUCCESS;   
 }

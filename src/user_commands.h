@@ -28,4 +28,13 @@ int join(node_information *node_info, char ring_id[3], char node_id[2]);
 */
 int direct_join(node_information * node_info, int node_id, int succ_id, char succ_ip[INET_ADDRSTRLEN], char succ_tcp[6]);
 
+
+
+/*
+*
+* Executes the chord command
+* @returns 1 if success
+*/
+int chord(node_information * node_information);
+
 #endif
