@@ -301,12 +301,18 @@ int process_message_fromchord_out(node_information * node_info){
 
     }
 
-    printf("\n%s\n", buffer);
+    //printf("\n%s\n", buffer);
 
     if(strncmp(buffer, "ROUTE ", 6) == 0){
 
         return process_ROUTE(node_info, buffer, FROM_CHORD);
     }
+
+    if(strncmp(buffer, "CHAT ", 5) == 0){
+
+        return process_CHAT(node_info, buffer);
+    }
+
 
     return SUCCESS_HIDDEN;
 
@@ -350,12 +356,18 @@ int process_message_fromchord_in(node_information * node_info){
 
             }
 
-            printf("\n%s\n", buffer);
+            //printf("\n%s\n", buffer);
 
             if(strncmp(buffer, "ROUTE ", 6) == 0){
 
                 return process_ROUTE(node_info, buffer, FROM_CHORD);
             }
+
+            if(strncmp(buffer, "CHAT ", 5) == 0){
+
+                return process_CHAT(node_info, buffer);
+            }
+
 
             break;
         }
@@ -937,6 +949,13 @@ int process_CHAT(node_information * node_info, char buffer[CHAT_BUFFER_SIZE]){
 
     if(next_node == node_info->pred_id){
         n = write(node_info->pred_fd, sent, CHAT_BUFFER_SIZE);
+        if(n == -1) exit(EXIT_FAILURE);
+        printf("\x1b[32m> Sent...\x1b[0m\n");
+        return SUCCESS;
+    }
+
+    if(next_node == node_info->chord_id){
+        n = write(node_info->chord_id, sent, CHAT_BUFFER_SIZE);
         if(n == -1) exit(EXIT_FAILURE);
         printf("\x1b[32m> Sent...\x1b[0m\n");
         return SUCCESS;
