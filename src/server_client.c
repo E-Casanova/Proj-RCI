@@ -955,7 +955,7 @@ int process_CHAT(node_information * node_info, char buffer[CHAT_BUFFER_SIZE]){
     }
 
     if(next_node == node_info->chord_id){
-        n = write(node_info->chord_id, sent, CHAT_BUFFER_SIZE);
+        n = write(node_info->chord_fd, sent, CHAT_BUFFER_SIZE);
         if(n == -1) exit(EXIT_FAILURE);
         printf("\x1b[32m> Sent...\x1b[0m\n");
         return SUCCESS;
