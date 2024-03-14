@@ -65,10 +65,26 @@ int execute_user_command(node_information *node_info){
 
             idtostr(node_info->id, id_str); idtostr(node_info->pred_id, pred_id_str); idtostr(node_info->succ_id, succ_id_str); idtostr(node_info->ss_id, ss_id_str);
 
-            printf("\x1b[36m> ------------SHOW TOPOLOGY--------------\n> -- Node:          %s %s:%s --\n> -- Successor:     %s %s:%s --\n> -- Predecessor:   %s %s:%s --\n> -- 2nd Successor: %s %s:%s --\n> ---------------------------------------\x1b[0m\n",
+            printf("\x1b[36m> ------------SHOW TOPOLOGY--------------\n> -- Node:          %s %s:%s --\n> -- Successor:     %s %s:%s --\n> -- Predecessor:   %s %s:%s --\n> -- 2nd Successor: %s %s:%s -- \x1b[0m\n",
                 id_str, node_info->ipaddr, node_info->port , succ_id_str, node_info->succ_ip, node_info->succ_port,
                 pred_id_str, node_info->pred_ip, node_info->pred_port, ss_id_str, node_info->ss_ip, node_info->ss_port);
             
+            printf("\x1b[36m> ---------------CHORDS------------------\n> -- Out:           %02d %s:%s --\n", node_info->chord_id, node_info->chord_ip, node_info->chord_port);
+
+            chord_information * tmp = node_info->chord_head->next;
+
+            while (tmp != NULL)
+            {
+                printf("> -- In:            %02d %s:%s --\n", tmp->chord_id, tmp->chord_ip, tmp->chord_port);
+
+                tmp = tmp->next;
+
+            }
+            
+
+
+            printf("> ---------------------------------------\x1b[0m\n");
+
             return SUCCESS;
 
         }
