@@ -22,16 +22,20 @@ int start_server_TCP(node_information * node_info){
     if (errcode != 0) return -1;
 
     errcode = bind(fd, res->ai_addr, res->ai_addrlen);
-    if (errcode == -1) return -1;
+    if (errcode == -1) {
+        free(res);
+        return E_FATAL;
+    }
 
     errcode = listen(fd, 100); // lots of chords maybe
-    if (errcode == -1) return -1;
+    if (errcode == -1){
+        free(res);
+        return E_FATAL;
+    }
 
     node_info->pred.res = res;
     node_info->server_fd = fd;
     
-
-
 
     return 1;
 }
@@ -65,6 +69,7 @@ int accept_inbound_connection(node_information * node_info){
 int process_message_fromtemp(node_information * node_info){
 
     char buffer[BUFFER_SIZE];
+    memset(buffer, 0, BUFFER_SIZE);
 
     int n = read(node_info->temp_fd, buffer, BUFFER_SIZE);
     if (n == -1) return E_FATAL;
@@ -110,6 +115,7 @@ int process_message_frompred(node_information * node_info){
 
 
     char buffer[BUFFER_SIZE];
+    memset(buffer, 0, BUFFER_SIZE);
 
     int n = read(node_info->pred_fd, buffer, BUFFER_SIZE);
     if (n == -1) return E_FATAL;
@@ -126,8 +132,6 @@ int process_message_frompred(node_information * node_info){
         node_info->pred_id = -1;
         memset(node_info->pred_ip, 0, sizeof(node_info->pred_ip));
         memset(node_info->pred_port, 0, sizeof(node_info->pred_port));
-
-
 
 
         return SUCCESS;
@@ -160,6 +164,8 @@ int process_message_frompred(node_information * node_info){
 int process_message_fromsucc(node_information * node_info){
 
     char buffer[BUFFER_SIZE];
+    memset(buffer, 0, BUFFER_SIZE);
+
 
     int n = read(node_info->succ_fd, buffer, BUFFER_SIZE);
     if (n == -1) return E_FATAL;
@@ -172,7 +178,23 @@ int process_message_fromsucc(node_information * node_info){
         id_str[2] = '\0';
         idtostr(node_info->id, id_str);
 
+        free(node_info->succ.res);
+
         printf("\n> Connection closed with successor: %s\n", node_info->succ_ip);
+
+
+        //I must close the chords that will become invalid if they exist
+
+        /*if(node_info->chord_id == node_info->ss_id) {
+            memset(node_info->chord_ip, 0, INET_ADDRSTRLEN);
+            memset(node_info->chord_port, 0, 6);
+            node_info->chord_id = -1;
+            close(node_info->chord_fd);
+            node_info->chord_fd = -1;
+        }*/
+
+        //Cant do this here, might bug if when my new predecessor announces the new shortest paths through his chord
+
         
         close(node_info->succ_fd);
         node_info->succ_fd = -1;
@@ -281,6 +303,7 @@ int process_message_fromchord_out(node_information * node_info){
 
 
     char buffer[BUFFER_SIZE];
+    memset(buffer, 0, BUFFER_SIZE);
 
     int n = read(node_info->chord_fd, buffer, BUFFER_SIZE);
     if (n == -1) return E_FATAL;
@@ -288,7 +311,7 @@ int process_message_fromchord_out(node_information * node_info){
     if(n == 0) {
         printf("> Connection closed with chord: %s", node_info->chord_ip);
 
-        clear_id_from_tables(node_info, node_info->chord_id);
+        if((node_info->chord_id != node_info->succ_id) && (node_info->chord_id != node_info->pred_id)) clear_id_from_tables(node_info, node_info->chord_id);
 
         close(node_info->chord_fd);
 
@@ -322,6 +345,7 @@ int process_message_fromchord_in(node_information * node_info){
 
 
     char buffer[BUFFER_SIZE];
+    memset(buffer, 0, BUFFER_SIZE);
 
     chord_information * tmp = node_info->chord_head;
     chord_information * tmp2 = tmp; // this will lag behind the main pointer
@@ -339,7 +363,7 @@ int process_message_fromchord_in(node_information * node_info){
             if(n == 0) {
                 printf("> Connection closed with chord: %s\n", tmp->chord_ip);
 
-                clear_id_from_tables(node_info, tmp->chord_id);
+                if((node_info->pred_id != -1) && (tmp->chord_id != node_info->succ_id) && (tmp->chord_id != node_info->pred_id)) clear_id_from_tables(node_info, tmp->chord_id);
 
                 close(tmp->chord_fd);
 
@@ -450,6 +474,8 @@ int process_ENTRY(node_information * node_info, char buffer[BUFFER_SIZE], whofro
     int n;
     char id_str[3];
 
+    memset(message, 0, BUFFER_SIZE);
+
     struct addrinfo hints, *res;
     memset(&hints, 0, sizeof hints);
     hints.ai_family = AF_INET;
@@ -477,11 +503,14 @@ int process_ENTRY(node_information * node_info, char buffer[BUFFER_SIZE], whofro
         strcpy(node_info->succ_ip, ip);
         strcpy(node_info->succ_port, port);
 
+        if(node_info->succ.res != NULL) free(node_info->succ.res);
         close(node_info->succ_fd);
         node_info->succ_fd = -1;
 
         n = getaddrinfo(ip, port, &hints, &res);
         if (n == -1) exit(1);
+
+        node_info->succ.res = res;
 
         if(node_info->ss_id != node_info->pred_id) clear_id_from_tables(node_info, node_info->ss_id); // this might be wrong
 
@@ -541,6 +570,8 @@ int process_ENTRY(node_information * node_info, char buffer[BUFFER_SIZE], whofro
 
             node_info->succ_fd = socket(AF_INET, SOCK_STREAM, 0);
 
+            if(node_info->succ.res != NULL) free(node_info->succ.res);
+            node_info->succ.res = res;
 
             n = connect(node_info->succ_fd, res->ai_addr, res->ai_addrlen);
 
@@ -645,6 +676,8 @@ int process_PRED(node_information * node_info, char buffer[BUFFER_SIZE], whofrom
     int n;
     char buffer_to_send[BUFFER_SIZE];
 
+    memset(buffer_to_send, 0, BUFFER_SIZE);
+
     id_str[2] = '\0';
 
     n = sscanf(buffer, "%s %d\n", command, &id);
@@ -699,6 +732,9 @@ int process_ROUTE(node_information * node_info, char buffer[BUFFER_SIZE], whofro
     //int pos, min;
     int is_valid = 1;
     
+    memset(route, 0, sizeof(route));
+    memset(route_cpy, 0, sizeof(route_cpy));
+    memset(tmp, 0, sizeof(tmp));
 
     n = sscanf(buffer, "%s %d %d %s\n", command, &id_neighbour, &id_dest, route);
     if((n > 4) || (n < 3)){
@@ -916,6 +952,9 @@ int process_CHAT(node_information * node_info, char buffer[CHAT_BUFFER_SIZE]){
     
     id_str[2] = '\0';
 
+    memset(sent, 0, CHAT_BUFFER_SIZE);
+    memset(message, 0, sizeof(message));
+
     n = sscanf(buffer, "%s %d %d %[^\n]s\n", command, &from, &dest, message);
 
     if((n != 4)){
@@ -1008,6 +1047,7 @@ int process_CHORD(node_information * node_info, char buffer[BUFFER_SIZE], whofro
         tmp->chord_fd = node_info->temp_fd;
         tmp->chord_id = id;
         tmp->active = 0;
+        tmp->next = NULL;
 
         strcpy(tmp->chord_ip, node_info->temp_ip);
         strcpy(tmp->chord_port, node_info->temp_port);
@@ -1041,6 +1081,8 @@ int announce_shortest_path(node_information * node_info, char path[BUFFER_SIZE],
     char buffer_out[BUFFER_SIZE];
     int n; 
 
+    memset(buffer_out, 0, BUFFER_SIZE);
+
     sprintf(buffer_out, "ROUTE %d %d %s\n", start, end, path); //We format the message to send to all our neighbours
 
 
@@ -1069,9 +1111,12 @@ int announce_shortest_path(node_information * node_info, char path[BUFFER_SIZE],
 
     while (tmp != NULL)
     {
-        if(tmp->chord_fd != -1) {
+        if((tmp->chord_fd != -1)) {
             n = write(tmp->chord_fd, buffer_out, BUFFER_SIZE); // tell it to the chord that's connected to me
-            if(n == -1) return E_FATAL;
+            if(n == -1) {
+                return E_FATAL;
+
+            }
         }
 
         tmp = tmp->next;
@@ -1087,6 +1132,8 @@ int announce_shortest_path_neighbour(node_information * node_info, char path[BUF
 
     char buffer_out[BUFFER_SIZE];
     int n; 
+
+    memset(buffer_out, 0, BUFFER_SIZE);
 
     sprintf(buffer_out, "ROUTE %d %d %s\n", start, end, path); //We format the message to send to all our neighbours
 
@@ -1106,6 +1153,8 @@ void send_stp_table(node_information * node_info, int fd){
 
     char message[BUFFER_SIZE];
     int n;
+
+    memset(message, 0, BUFFER_SIZE);
 
     for(int i = 0; i < 100; i++){
         if(node_info->stp_table[i][0] != '\0') {

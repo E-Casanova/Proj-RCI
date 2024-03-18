@@ -95,9 +95,6 @@ cor_interrupt wait_for_interrupt(node_information * node_info){
     }
     
 
-    //Add remaining file descriptors
-
-
 
     int n = select(fdmax+1, &readfds, NULL, NULL, &TIMEOUT);
 

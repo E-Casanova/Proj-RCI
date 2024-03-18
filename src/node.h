@@ -12,9 +12,7 @@ typedef struct succ_info {
 } succ_info;
 
 typedef struct pred_info {
-    socklen_t addrlen;
     struct addrinfo *res;
-    struct sockaddr_in addr;
 } pred_info;
 
 typedef struct chord_information {

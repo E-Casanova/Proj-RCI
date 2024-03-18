@@ -92,11 +92,12 @@ int main(int argc, char *argv[])
     printf("> ");
     fflush(stdout);
 
-    
+    int counter = 0;
 
     while (1)
     {
         //Will block until something happens, timeout after 1ms
+
         cor_interrupt i = wait_for_interrupt(app_node);
 
         status success = SUCCESS;
@@ -125,12 +126,12 @@ int main(int argc, char *argv[])
             success = process_message_fromtemp(app_node);
             break;
         case I_MESSAGE_CHORD_IN:
-            printf("> New message from chord\n");
+            //printf("> New message from chord\n");
             fflush(stdout);
             success = process_message_fromchord_in(app_node);
             break;
         case I_MESSAGE_CHORD_OUT:
-            printf("> New message from chord\n");
+            //printf("> New message from chord\n");
             fflush(stdout);
             success = process_message_fromchord_out(app_node);
             break;
@@ -170,6 +171,25 @@ int main(int argc, char *argv[])
             }
             printf("> ");
             fflush(stdout); 
+        }
+
+        if(i == I_TIMEOUT) counter++;
+
+
+
+
+        //Quick fix for invalid chords after someone leaves
+        if(counter > 5000){
+            counter = 0;
+            if((app_node->chord_id != -1) && ((app_node->chord_id == app_node->succ_id) || (app_node->chord_id == app_node->pred_id))){
+
+                memset(app_node->chord_ip, 0, INET_ADDRSTRLEN);
+                memset(app_node->chord_port, 0, 6);
+                app_node->chord_id = -1;
+                close(app_node->chord_fd);
+                app_node->chord_fd = -1;
+            
+            }
         }
 
     }

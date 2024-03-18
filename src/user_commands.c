@@ -256,6 +256,8 @@ int execute_user_command(node_information *node_info){
 
         printf("\n%s\n", buffer_in);
 
+        free(res);
+
         return SUCCESS;
 
     }
@@ -268,6 +270,9 @@ int execute_user_command(node_information *node_info){
         int dest, status, next_node, n;
         char message[128], cmd[32];
         char sent[CHAT_BUFFER_SIZE];
+
+        memset(message, 0, 128);
+        memset(sent, 0, CHAT_BUFFER_SIZE);
 
         status = sscanf(buffer, "%s %d %[^\n]s", cmd, &dest, message);
 
@@ -348,6 +353,10 @@ int execute_user_command(node_information *node_info){
         struct sockaddr_in addr;
         socklen_t addrlen = sizeof(addr);
 
+        memset(buffer_out, 0, BUFFER_SIZE);
+        memset(buffer_in, 0, BUFFER_SIZE);
+
+
 
         int n = start_client_UDP(node_info->ns_ipaddr, node_info->ns_port, node_info);
         if(n != 1) return E_FATAL;
@@ -412,23 +421,38 @@ int execute_user_command(node_information *node_info){
         memset(node_info->chord_ip, 0, sizeof(node_info->chord_ip));
         memset(node_info->chord_port, 0, sizeof(node_info->chord_port));
 
-        chord_information * tmp = node_info->chord_head->next;
+        chord_information * tmp = node_info->chord_head;
+        chord_information * tmp2 = tmp;
+
+        tmp = tmp->next;
 
         while (tmp != NULL)
         {
 
-            if(tmp->chord_fd > 0) close(tmp->chord_fd);
+            if(tmp->chord_fd != -1) close(tmp->chord_fd);
             tmp->chord_fd = -1;
+            tmp->chord_id = -1;
+            memset(tmp->chord_ip, 0, INET_ADDRSTRLEN);
+            memset(tmp->chord_port, 0, 6);
+            tmp->active = 0;
+
+            tmp2 = tmp;
 
             tmp = tmp->next;
 
+            free(tmp2);
+
         }
+
+        node_info->chord_head->next = NULL;
         
 
         printf("\x1b[32m> Successfully left ring %s\x1b[0m\n", node_info->ring_id_str);
 
         memset(node_info->ring_id_str, 0, sizeof(node_info->ring_id_str));
         memset(node_info->id_str, 0, sizeof(node_info->id_str));
+
+        free(res);
 
         return SUCCESS;
 
@@ -474,6 +498,10 @@ int join(node_information * node_info, char ring_id[3], char node_id[2]){
 
     node_id_int = atoi(node_id);
 
+    memset(buffer_out, 0, 32);
+    memset(buffer_in, 0, 1000);
+    memset(tmp, 0, 1000);
+
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_DGRAM;
@@ -508,6 +536,7 @@ int join(node_information * node_info, char ring_id[3], char node_id[2]){
 
         if(errno == EAGAIN || errno == EWOULDBLOCK) {
             printf("\x1b[33mNode Server timed out...\x1b[0m\n");
+            free(res);
             return E_NON_FATAL;
         } else {
             return E_FATAL;
@@ -566,6 +595,7 @@ int join(node_information * node_info, char ring_id[3], char node_id[2]){
 
             if(errno == EAGAIN || errno == EWOULDBLOCK) {
                 printf("\x1b[33m> Node Server timed out...\x1b[0m\n");
+                free(res);
                 return E_NON_FATAL;
             } else {
                 return E_FATAL;
@@ -576,8 +606,11 @@ int join(node_information * node_info, char ring_id[3], char node_id[2]){
 
         if(strncmp(buffer_in, "OKREG", 5) != 0){
             printf("> Invalid register...\n");
+            free(res);
             return E_NON_FATAL;
         }
+
+        free(res);
 
         return direct_join(node_info, node_id_int, node_id_int, node_info->ipaddr, node_info->port); //joining myself
         
@@ -595,6 +628,7 @@ int join(node_information * node_info, char ring_id[3], char node_id[2]){
 
         if(node_id_int > 99) {
             printf("> Ring is full...\n");
+            free(res);
             return E_NON_FATAL;
         }
 
@@ -641,6 +675,7 @@ int join(node_information * node_info, char ring_id[3], char node_id[2]){
 
         if(errno == EAGAIN || errno == EWOULDBLOCK) {
             printf("\x1b[33m> Node Server timed out...\x1b[0m\n");
+            free(res);
             return E_NON_FATAL;
         } else {
             return E_FATAL;
@@ -649,8 +684,11 @@ int join(node_information * node_info, char ring_id[3], char node_id[2]){
 
     if(strncmp(buffer_in, "OKREG", 5) != 0){
         printf("> Invalid register...\n");
+        free(res);
         return E_NON_FATAL;
     }
+
+    free(res);
 
     return direct_join(node_info, node_id_int, succ_id, succ_ip, succ_tcp);
 
@@ -664,6 +702,9 @@ int direct_join(node_information * node_info, int node_id, int succ_id, char suc
     socklen_t addrlen = sizeof(addr);
     char id_str[3];
     id_str[2] = '\0';
+
+    memset(buffer, 0, BUFFER_SIZE);
+
 
     node_info->id = node_id;
 
@@ -728,6 +769,10 @@ int chord(node_information * node_info){
 
     int ids[100];
     int n, n_nodes = 0;
+
+    memset(buffer_in, 0, BUFFER_SIZE);
+    memset(tmp, 0, BUFFER_SIZE);
+    memset(buffer_out, 0, 32);
 
     memset(ids, 0, sizeof(ids));
     memset(buffer_in, 0, BUFFER_SIZE);
@@ -842,6 +887,7 @@ int chord(node_information * node_info){
 
     if(node_info->chord_id == -1) {
         printf("\x1b[33m> Cannot create chord...\x1b[0m\n");
+        free(res);
         return E_NON_FATAL;
     }
     
@@ -882,6 +928,9 @@ int chord(node_information * node_info){
 
         printf("\x1b[33m Could not connect to chord: %s\x1b[0m\n", strerror(errno));
 
+        free(res_chord);
+        free(res);
+
         return E_NON_FATAL;
     }
 
@@ -896,6 +945,9 @@ int chord(node_information * node_info){
     sleep(1);
 
     send_stp_table(node_info, node_info->chord_fd);
+
+    free(res_chord);
+    free(res);
 
     return SUCCESS;   
 }

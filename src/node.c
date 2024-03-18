@@ -68,9 +68,9 @@ void free_app_node(node_information * node_info){
 
 
     if(node_info->server_fd != -1) close(node_info->server_fd);
-    close(node_info->pred_fd);
-    close(node_info->succ_fd);
-    close(node_info->temp_fd);
+    if(node_info->pred_fd != -1)   close(node_info->pred_fd);
+    if(node_info->succ_fd != -1)   close(node_info->succ_fd);
+    if(node_info->temp_fd != -1)   close(node_info->temp_fd);
 
     chord_information * tmp  = node_info->chord_head;
     chord_information * tmp2 = tmp ;
@@ -81,10 +81,15 @@ void free_app_node(node_information * node_info){
 
         tmp = tmp->next;
 
-        if(tmp2->chord_fd > 0) close(tmp2->chord_fd);
+        if(tmp2->chord_fd != -1) close(tmp2->chord_fd);
         free(tmp2);
 
     }
+
+    if(node_info->pred.res != NULL) free(node_info->pred.res);
+    if(node_info->succ.res != NULL) free(node_info->succ.res);
+
+    free(node_info);
     
 
     return;
