@@ -70,25 +70,26 @@ int isport(const char * str);
 int isip(const char * str);
 
 /*
-*
-*
-*   Waits for an event and returns it when it occurs
-*
-*/
+ * Waits for an event and returns it when it occurs
+ */
 cor_interrupt wait_for_interrupt(node_information *node_info);
 
 
 /*
-*
-* Somehow strnlen does not work so we have to make our own
-*
-*/
+ * Somehow strnlen does not work so we have to make our own
+ */
 size_t strnlen_2(const char * s, size_t maxlen);
 
 
 
+/*
+ * Converts an integer ID to a string representation
+ */
 void idtostr(int id, char str[2]);
 
+/*
+ * Converts a string representation to an integer ID
+ */
 void strtoid(int id, char str[2]);
 
 
