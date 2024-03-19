@@ -61,7 +61,7 @@ int main(int argc, char *argv[])
         strcpy(ns_port, DEFFAULT_NS_PORT);
 
     } 
-    if(isip(argv[3]) == 1) {
+    else if(isip(argv[3]) == 1) {
 
         strcpy(ns_ip, argv[3]);
         strcpy(ns_port, DEFFAULT_NS_PORT);
@@ -103,9 +103,9 @@ int main(int argc, char *argv[])
 
     while (1)
     {
-        //Will block until something happens, timeout after 1ms
 
-        cor_interrupt i = wait_for_interrupt(app_node);
+        cor_interrupt i = wait_for_interrupt(app_node); //Will block until something happens, timeout after 1ms
+
 
         status success = SUCCESS;
 
@@ -115,11 +115,9 @@ int main(int argc, char *argv[])
             success = execute_user_command(app_node);
             break;
         case I_MESSAGE_PREDECESSOR:
-            //printf("Incoming message from predecessor...\n");
             success = process_message_frompred(app_node);
             break;
         case I_MESSAGE_SUCCESSOR:
-            //printf("Incoming message from successor...\n");
             success = process_message_fromsucc(app_node);
             break;
         case I_NEW_CONNECTION:
