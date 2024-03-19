@@ -148,7 +148,7 @@ int main(int argc, char *argv[])
         }
 
         if(success == 10) {
-            printf("Exiting now...\n");
+            printf("\x1b[33m> Exiting now...\x1b[0m\n");
             fflush(stdout);
             free_app_node(app_node);
             break;
@@ -179,7 +179,7 @@ int main(int argc, char *argv[])
 
 
         //Quick fix for invalid chords after someone leaves
-        if(counter > 5000){
+        if(counter > 500){
             counter = 0;
             if((app_node->chord_id != -1) && ((app_node->chord_id == app_node->succ_id) || (app_node->chord_id == app_node->pred_id))){
 

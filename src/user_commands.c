@@ -149,7 +149,7 @@ int execute_user_command(node_information *node_info){
             printf("\x1b[36m> ---- EXPEDITION TABLE ---- \x1b[0m\n");
 
             for(int i = 0; i < 100; i++) {
-                if(node_info->exp_table[i] > 0) printf("\x1b[36m> %d %d\x1b[0m\n", i, node_info->exp_table[i]);
+                if(node_info->exp_table[i] > -1) printf("\x1b[36m> %d %d\x1b[0m\n", i, node_info->exp_table[i]);
             }
 
             return SUCCESS;
@@ -200,16 +200,26 @@ int execute_user_command(node_information *node_info){
         || strncmp("remove chord ", buffer, 13) == 0 || strncmp("rc ", buffer, 2) == 0)
     {
 
-        close(node_info->chord_fd);
-        node_info->chord_fd = -1;
-        memset(node_info->chord_ip, 0, INET_ADDRSTRLEN);
-        memset(node_info->chord_port, 0, 6);
+        if(node_info->chord_fd != -1){
 
-        clear_id_from_tables(node_info, node_info->chord_id);
+            close(node_info->chord_fd);
+            node_info->chord_fd = -1;
+            memset(node_info->chord_ip, 0, INET_ADDRSTRLEN);
+            memset(node_info->chord_port, 0, 6);
 
-        node_info->chord_id = -1;
+            clear_id_from_tables(node_info, node_info->chord_id);
 
-        return SUCCESS;
+            node_info->chord_id = -1;
+
+            printf("\x1b[33m> Chord removed...\x1b[0m\n");
+
+            return SUCCESS;
+        }
+    
+
+        printf("\x1b[33m> No chords to remove...\x1b[0m\n");
+
+        return E_NON_FATAL;
 
     }
 
@@ -403,7 +413,7 @@ int execute_user_command(node_information *node_info){
             return E_NON_FATAL;
         }
 
-        memset(node_info->exp_table, 0, sizeof(node_info->exp_table));
+        memset(node_info->exp_table, -1, sizeof(node_info->exp_table));
         memset(node_info->stp_table, 0, sizeof(node_info->stp_table));
         memset(node_info->fwd_table, 0, sizeof(node_info->fwd_table));
 
@@ -963,7 +973,7 @@ int chord(node_information * node_info){
 
     printf("\x1b[32m> Successfully created chord to node %d\x1b[0m\n", node_info->chord_id);
 
-    sleep(1);
+    //sleep(1);
 
     send_stp_table(node_info, node_info->chord_fd);
 

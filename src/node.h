@@ -17,98 +17,72 @@ typedef struct pred_info {
 
 typedef struct chord_information {
 
-    int active;
-    int chord_id;
-    int chord_fd;
-    char chord_ip[INET_ADDRSTRLEN];
-    char chord_port[6];
-    struct chord_information * next;
+    int active;                              // Indicates whether the chord is the one trying to send me a message (used for select)
+    int chord_id;                            // Chord ID
+    int chord_fd;                            // Chord file descriptor
+    char chord_ip[INET_ADDRSTRLEN];          // Chord IP address
+    char chord_port[6];                      // Chord TCP port
+    struct chord_information *next;          // Pointer to the next chord information structure
 
 } chord_information;
 
 
+
 typedef struct node_information
 {
+    char fwd_table[100][100][100];       // Forwarding table: fwd_table[dest][neighbour]
+    char stp_table[100][100];            // Shortest path table: stp_table[dest]
+    int exp_table[100];                  // Expedition table: exp_table[dest]
 
-    //FORWARDING
-
-    char   fwd_table[100][100][100]; // fwd_table[dest][neighbour]
-    char   stp_table[100][100]; // stp_table[dest]
-    int    exp_table[100]; // exp_table[dest]
-
-    //NODE SERVER//////////
-    
-    //Node server ip address
-    char ns_ipaddr[INET_ADDRSTRLEN];
-    //Node server UDP Port
-    char ns_port[6];
-    //Node server's socket file descriptor
-    int ns_fd; 
-    /////////////////////
-
-    //TCP server's file descriptor
-    int server_fd;
-    // Node id
-    unsigned int id;
-    //Node IP
-    char ipaddr[INET_ADDRSTRLEN];
-    //Node's TCP server port
-    char port[6];
-    //Successor id
-    unsigned int succ_id;
-    //Successor IP address
-    char succ_ip[INET_ADDRSTRLEN];
-    //Successor TCP port
-    char succ_port[6];
-    //Successor's file descriptor
-    int succ_fd;
-    //Successor's address information
-    succ_info succ;
-    //Predecessor id
-    unsigned int pred_id;
-    //Predecessor IP address
-    char pred_ip[INET_ADDRSTRLEN];
-    //Predecessor TCP Port
-    char pred_port[6];
-    
-    int pred_fd;//Predecessor's file descriptor
-    
-    pred_info pred;    //Predecessor's address information
+    char ns_ipaddr[INET_ADDRSTRLEN];     // Node server IP address
+    char ns_port[6];                     // Node server UDP Port
+    int ns_fd;                           // Node server's socket file descriptor
 
 
-    int  ss_id;    //Second successor's id
-
-    char ss_ip[INET_ADDRSTRLEN];    //Second successor's ip
-
-    
-    char ss_port[6];//Second sucessor's port
-
-    int  temp_fd;
-    char temp_ip[INET_ADDRSTRLEN];
-    char temp_port[6];
-
-    //////CHORDS//////////
-
-    
-    chord_information * chord_head; // Chords connected to me
-
-    int  chord_fd;
-    int  chord_id;    //Chord im connected to
-
-    char chord_ip[INET_ADDRSTRLEN];
-    char chord_port[6];
-
-    /////////////////////
+    int server_fd;                       // TCP server's file descriptor
+    unsigned int id;                     // Node id
+    char ipaddr[INET_ADDRSTRLEN];        // Node IP address
+    char port[6];                        // Node's TCP server port
 
 
-    /////AUXILLIARIES////
+    unsigned int succ_id;                // Successor id
+    char succ_ip[INET_ADDRSTRLEN];       // Successor IP address
+    char succ_port[6];                   // Successor TCP port
+    int succ_fd;                         // Successor's file descriptor
+    succ_info succ;                      // Successor's address information
 
-    char id_str[3];
-    char ring_id_str[4];
 
-    //////////////////////
+    unsigned int pred_id;                // Predecessor id
+    char pred_ip[INET_ADDRSTRLEN];       // Predecessor IP address
+    char pred_port[6];                   // Predecessor TCP Port
+    int pred_fd;                         // Predecessor's file descriptor
+    pred_info pred;                      // Predecessor's address information
+
+
+    int ss_id;                           // Second successor's id
+    char ss_ip[INET_ADDRSTRLEN];         // Second successor's IP address
+    char ss_port[6];                     // Second successor's TCP port
+
+
+    int temp_fd;                         // Temporary node's file descriptor
+    char temp_ip[INET_ADDRSTRLEN];       // Temporary node's IP address
+    char temp_port[6];                   // Temporary node's TCP port
+
+
+    chord_information *chord_head;       // Chords connected to me
+
+
+    int chord_fd;                        // Chord server file descriptor
+    int chord_id;                        // Chord I'm connected to
+    char chord_ip[INET_ADDRSTRLEN];      // Chord IP address
+    char chord_port[6];                  // Chord TCP port
+
+
+    char id_str[3];                      // String representation of node id
+    char ring_id_str[4];                 // String representation of ring id
 
 } node_information;
+
 
 
 /*
@@ -121,6 +95,11 @@ node_information* init_node(char ippadr[INET_ADDRSTRLEN], char port[6], int id, 
 
 
 
+/*
+ * Frees memory associated with an application node.
+ * 
+ * @param node_info Pointer to the node_information structure
+ */
 void free_app_node(node_information * node_info);
 
 

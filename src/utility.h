@@ -26,31 +26,30 @@
 #define BUFFER_SIZE 300
 #define CHAT_BUFFER_SIZE 300
 
-
+/*
+ * Enumeration to represent various types of interrupts
+ */
 typedef enum interrupt {
-
-    I_USER_COMMAND,
-    I_MESSAGE_TEMP,
-    I_NODE_SERVER_MSG,
-    I_MESSAGE_PREDECESSOR,
-    I_MESSAGE_SUCCESSOR,
-    I_NEW_CONNECTION,
-    I_TIMEOUT,
-    I_ERROR,
-    I_MESSAGE_CHORD_IN,
-    I_MESSAGE_CHORD_OUT
-
+    I_USER_COMMAND,           // Interrupt triggered by a user command
+    I_MESSAGE_TEMP,           // Interrupt triggered by a message from a temporary node
+    I_NODE_SERVER_MSG,        // Interrupt triggered by a message from a node server
+    I_MESSAGE_PREDECESSOR,    // Interrupt triggered by a message from a predecessor node
+    I_MESSAGE_SUCCESSOR,      // Interrupt triggered by a message from a successor node
+    I_NEW_CONNECTION,         // Interrupt triggered by a new inbound connection
+    I_TIMEOUT,                // Interrupt triggered by a timeout
+    I_ERROR,                  // Interrupt triggered by an error condition
+    I_MESSAGE_CHORD_IN,       // Interrupt triggered by a message from a chord connected to me
+    I_MESSAGE_CHORD_OUT       // Interrupt triggered by a message from a chord im connected to
 } cor_interrupt;
 
 
 typedef enum status {
-    E_FATAL = -1,
-    E_NON_FATAL = -2,
-    SUCCESS = 1,
-    UNKNOWN_COMMAND = 2,
-    SUCCESS_HIDDEN = 3
+    E_FATAL = -1,         // Fatal error 
+    E_NON_FATAL = -2,     // Non-fatal error 
+    SUCCESS = 1,          // Success 
+    UNKNOWN_COMMAND = 2,  // Unknown command 
+    SUCCESS_HIDDEN = 3    // Success but don't print anything after 
 } status;
-
 
 /*
 *

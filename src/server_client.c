@@ -71,7 +71,31 @@ int process_message_fromtemp(node_information * node_info){
     char buffer[BUFFER_SIZE];
     memset(buffer, 0, BUFFER_SIZE);
 
-    int n = read(node_info->temp_fd, buffer, BUFFER_SIZE);
+    char tmp = '\0';
+    int n, i;
+
+
+    //int n = read(node_info->succ_fd, buffer, BUFFER_SIZE); THIS DOES NOT WORK IF THEY SEND A LOT OF MESSAGES AT A TIME
+
+
+    i = 0;
+    n = 0;
+
+    while ((n = read(node_info->temp_fd, &tmp, 1)) != -1)
+    {
+
+        if(n == 0) break;
+
+        buffer[i] = tmp;
+        i++;
+
+        if(tmp == '\n') {
+            buffer[i] = '\0';
+            break;
+        }
+
+    }
+
     if (n == -1) return E_FATAL;
 
     if( n == 0) {
@@ -231,20 +255,6 @@ int process_message_fromsucc(node_information * node_info){
         free(node_info->succ.res);
 
         printf("\n> Connection closed with successor: %s\n", node_info->succ_ip);
-
-
-        //I must close the chords that will become invalid if they exist
-
-        /*if(node_info->chord_id == node_info->ss_id) {
-            memset(node_info->chord_ip, 0, INET_ADDRSTRLEN);
-            memset(node_info->chord_port, 0, 6);
-            node_info->chord_id = -1;
-            close(node_info->chord_fd);
-            node_info->chord_fd = -1;
-        }*/
-
-        //Cant do this here, might bug if when my new predecessor announces the new shortest paths through his chord
-
         
         close(node_info->succ_fd);
         node_info->succ_fd = -1;
@@ -927,7 +937,7 @@ int process_ROUTE(node_information * node_info, char buffer[BUFFER_SIZE], whofro
 
             //Update expedition table
 
-            if(pos == -1) node_info->exp_table[id_dest] = 0;
+            if(pos == -1) node_info->exp_table[id_dest] = -1;
 
             if(pos > -1)  node_info->exp_table[id_dest] = pos;
 
@@ -1019,8 +1029,8 @@ int process_CHAT(node_information * node_info, char buffer[CHAT_BUFFER_SIZE]){
 
     if(dest == node_info->id) {
 
-        printf("\x1b\n[35m> --- INCOMING MESSAGE FROM NODE: %s ---\n", id_str);
-        printf("\n %s \n", message);
+        printf("\x1b\n[35m> --- INCOMING MESSAGE FROM NODE: %s ---\n> ", id_str);
+        printf("\n> %s \n>", message);
         printf("\x1b[0m\n> ");
 
         return SUCCESS_HIDDEN;
@@ -1035,22 +1045,22 @@ int process_CHAT(node_information * node_info, char buffer[CHAT_BUFFER_SIZE]){
     if(next_node == node_info->succ_id){
         n = write(node_info->succ_fd, sent, strlen(sent));
         if(n == -1) exit(EXIT_FAILURE);
-        printf("\x1b[32m> Sent...\x1b[0m\n");
-        return SUCCESS;
+        //printf("\x1b[32m> Sent...\x1b[0m\n");
+        return SUCCESS_HIDDEN;
     }
 
     if(next_node == node_info->pred_id){
         n = write(node_info->pred_fd, sent, strlen(sent));
         if(n == -1) exit(EXIT_FAILURE);
-        printf("\x1b[32m> Sent...\x1b[0m\n");
-        return SUCCESS;
+        //printf("\x1b[32m> Sent...\x1b[0m\n");
+        return SUCCESS_HIDDEN;
     }
 
     if(next_node == node_info->chord_id){
         n = write(node_info->chord_fd, sent, strlen(sent));
         if(n == -1) exit(EXIT_FAILURE);
-        printf("\x1b[32m> Sent...\x1b[0m\n");
-        return SUCCESS;
+        //printf("\x1b[32m> Sent...\x1b[0m\n");
+        return SUCCESS_HIDDEN;
     }
 
     chord_information * tmp;
@@ -1062,8 +1072,8 @@ int process_CHAT(node_information * node_info, char buffer[CHAT_BUFFER_SIZE]){
         if((tmp->chord_id == next_node) && (tmp->chord_fd != -1)){
             n = write(tmp->chord_fd, sent, strlen(sent));
             if(n == -1) exit(EXIT_FAILURE);
-            printf("\x1b[32m> Sent...\x1b[0m\n");
-            return SUCCESS;
+            //printf("\x1b[32m> Sent...\x1b[0m\n");
+            return SUCCESS_HIDDEN;
         }
 
         tmp = tmp->next;
@@ -1227,7 +1237,7 @@ void clear_id_from_tables(node_information * node_info, int id){
 
             if (pos == -1) { // we found no path
                 memset(node_info->stp_table[i], 0, 100);
-                node_info->exp_table[i] = 0;
+                node_info->exp_table[i] = -1;
                 announce_shortest_path(node_info, buffer, node_info->id, id);
             }
 
@@ -1243,7 +1253,7 @@ void clear_id_from_tables(node_information * node_info, int id){
         }
 
         for(int i = 0; i < 100; i++) {
-            if(node_info->exp_table[i] == id) node_info->exp_table[i] = 0;
+            if(node_info->exp_table[i] == id) node_info->exp_table[i] = -1;
         }
     
 

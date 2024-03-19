@@ -57,7 +57,7 @@ node_information* init_node(char ippadr[INET_ADDRSTRLEN], char port[6], int id, 
     tmp->id_str[2] = '\0';
 
 
-    memset(tmp->exp_table, 0, sizeof(tmp->exp_table));
+    memset(tmp->exp_table, -1, sizeof(tmp->exp_table));
     memset(tmp->stp_table, 0, sizeof(tmp->stp_table));
     memset(tmp->fwd_table, 0, sizeof(tmp->fwd_table));
 
