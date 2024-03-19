@@ -4,14 +4,14 @@ FLAGS   := -std=c99 -O3 -Wall
 
 FILES   := $(wildcard src/*.c)
 
+#RCI EDUARDO CASANOVA E EDUARDO SILVESTRE 2023/24
 
-
-all: bin COR
+all: bin COR 
 
 bin:
 	mkdir -p bin
 
-COR: $(FILES)
+COR: $(FILES) 
 	$(CC) -lc -o bin/$@ $^ $(FLAGS) 
 
 clean: 

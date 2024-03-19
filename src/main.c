@@ -15,6 +15,9 @@ void usage(char * arg){
 }
 
 
+//PROJETO RCI 2023/24 
+//AUTORIA DE EDUARDO CASANOVA E EDUARDO SILVESTRE
+
 
 int main(int argc, char *argv[])
 {
