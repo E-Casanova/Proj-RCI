@@ -9,15 +9,15 @@ Este projeto de Rede de Computadores e Internet (RCI) visa desenvolver uma aplic
 - **Encaminhamento de Mensagens**: Utilização de um algoritmo de encaminhamento para determinar o caminho mais curto através do anel, otimizando a entrega de mensagens.
 - **Interface de Utilizador**: Comandos para permitir aos utilizadores juntarem-se à rede, enviarem mensagens e saírem do chat.
 
-## Começando
+
 ### Pré-requisitos
 - GCC para compilação do código fonte
 - Sistema operacional Linux ou compatível
 
-## Comandos da Interface de Usuário
-- `join (j) ring id`: Entrar em um anel especificado com um ID único.
-- `direct join (dj) id succid succIP succTCP`: Entrar diretamente em um anel sem consultar o servidor de registros.
-- `chord (c)`: Estabelecer uma corda para otimizar o caminho de mensagens.
+## Comandos da Interface de Utilizador
+- `join (j) ring id`: Entrar num anel especificado com um ID único.
+- `direct join (dj) id succid succIP succTCP`: Entrar diretamente num anel sem consultar o servidor de nós.
+- `chord (c)`: Estabelecer uma corda.
 - `leave (l)`: Sair do anel.
 - `message (m) dest message`: Enviar uma mensagem para um destino específico no anel.
 
