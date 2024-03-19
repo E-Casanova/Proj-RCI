@@ -196,6 +196,23 @@ int execute_user_command(node_information *node_info){
 
     }
 
+    if(strncmp("remove chord\n", buffer, 13) == 0 || strncmp("rc\n", buffer, 3) == 0
+        || strncmp("remove chord ", buffer, 13) == 0 || strncmp("rc ", buffer, 2) == 0)
+    {
+
+        close(node_info->chord_fd);
+        node_info->chord_fd = -1;
+        memset(node_info->chord_ip, 0, INET_ADDRSTRLEN);
+        memset(node_info->chord_port, 0, 6);
+
+        clear_id_from_tables(node_info, node_info->chord_id);
+
+        node_info->chord_id = -1;
+
+        return SUCCESS;
+
+    }
+
     if(strncmp("nl\n", buffer, 3) == 0 || strncmp("nl\n", buffer, 3) == 0
         || strncmp("nl ", buffer, 3) == 0 || strncmp("nl ", buffer, 3) == 0)
     {
@@ -296,21 +313,21 @@ int execute_user_command(node_information *node_info){
         sprintf(sent, "CHAT %d %d %s\n", from, dest, message);
 
         if(next_node == node_info->succ_id){
-            n = write(node_info->succ_fd, sent, CHAT_BUFFER_SIZE);
+            n = write(node_info->succ_fd, sent, strlen(sent));
             if(n == -1) exit(EXIT_FAILURE);
             printf("\x1b[32m> Sent...\x1b[0m\n");
             return SUCCESS;
         }
 
         if(next_node == node_info->pred_id){
-            n = write(node_info->pred_fd, sent, CHAT_BUFFER_SIZE);
+            n = write(node_info->pred_fd, sent, strlen(sent));
             if(n == -1) exit(EXIT_FAILURE);
             printf("\x1b[32m> Sent...\x1b[0m\n");
             return SUCCESS;
         }
 
         if(next_node == node_info->chord_id){
-            n = write(node_info->chord_fd, sent, CHAT_BUFFER_SIZE);
+            n = write(node_info->chord_fd, sent, strlen(sent));
             if(n == -1) exit(EXIT_FAILURE);
             printf("\x1b[32m> Sent...\x1b[0m\n");
             return SUCCESS;
@@ -323,7 +340,7 @@ int execute_user_command(node_information *node_info){
         while (tmp != NULL)
         {
             if((tmp->chord_id == next_node) && (tmp->chord_fd != -1)){
-                n = write(tmp->chord_fd, sent, CHAT_BUFFER_SIZE);
+                n = write(tmp->chord_fd, sent, strlen(sent));
                 if(n == -1) exit(EXIT_FAILURE);
                 printf("\x1b[32m> Sent...\x1b[0m\n");
                 return SUCCESS;
@@ -743,8 +760,10 @@ int direct_join(node_information * node_info, int node_id, int succ_id, char suc
 
     sprintf(buffer, "ENTRY %s %s %s\n", id_str, node_info->ipaddr, node_info->port);
 
-    int n = write(node_info->succ_fd,buffer, BUFFER_SIZE);
+    int n = write(node_info->succ_fd,buffer, strlen(buffer));
     if (n == -1) return E_FATAL;
+
+    memset(buffer, 0, BUFFER_SIZE);
 
 
     //send the spt table to the guy
@@ -938,7 +957,9 @@ int chord(node_information * node_info){
 
     sprintf(buffer_out, "CHORD %s\n", node_info->id_str);
 
-    n = write(node_info->chord_fd, buffer_out, 32);
+    n = write(node_info->chord_fd, buffer_out, strlen(buffer_out));
+
+    memset(buffer_out, 0, 32);
 
     printf("\x1b[32m> Successfully created chord to node %d\x1b[0m\n", node_info->chord_id);
 

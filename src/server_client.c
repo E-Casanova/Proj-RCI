@@ -117,7 +117,35 @@ int process_message_frompred(node_information * node_info){
     char buffer[BUFFER_SIZE];
     memset(buffer, 0, BUFFER_SIZE);
 
-    int n = read(node_info->pred_fd, buffer, BUFFER_SIZE);
+
+
+    char tmp = '\0';
+    int n, i;
+
+
+    //int n = read(node_info->succ_fd, buffer, BUFFER_SIZE); THIS DOES NOT WORK IF THEY SEND A LOT OF MESSAGES AT A TIME
+
+
+    i = 0;
+    n = 0;
+
+    while ((n = read(node_info->pred_fd, &tmp, 1)) != -1)
+    {
+
+        if(n == 0) break;
+
+        buffer[i] = tmp;
+        i++;
+
+        if(tmp == '\n') {
+            buffer[i] = '\0';
+            break;
+        }
+
+    }
+
+
+
     if (n == -1) return E_FATAL;
 
     //printf("pred: %s\n", buffer);
@@ -166,11 +194,33 @@ int process_message_fromsucc(node_information * node_info){
     char buffer[BUFFER_SIZE];
     memset(buffer, 0, BUFFER_SIZE);
 
+    char tmp = '\0';
+    int n, i;
 
-    int n = read(node_info->succ_fd, buffer, BUFFER_SIZE);
+
+    //int n = read(node_info->succ_fd, buffer, BUFFER_SIZE); THIS DOES NOT WORK IF THEY SEND A LOT OF MESSAGES AT A TIME
+
+
+    i = 0;
+    n = 0;
+
+    while ((n = read(node_info->succ_fd, &tmp, 1)) != -1)
+    {
+
+        if(n == 0) break;
+
+        buffer[i] = tmp;
+        i++;
+
+        if(tmp == '\n') {
+            buffer[i] = '\0';
+            break;
+        }
+
+    }
+    
+    
     if (n == -1) return E_FATAL;
-
-    //printf("succ: %s\n", buffer);
     
     if( n == 0) {
 
@@ -254,15 +304,19 @@ int process_message_fromsucc(node_information * node_info){
 
         sprintf(buffer, "PRED %s\n", id_str);
 
-        n = write(node_info->succ_fd, buffer, BUFFER_SIZE);
+        n = write(node_info->succ_fd, buffer, strlen(buffer));
         if(n == -1) exit(EXIT_FAILURE);
+
+        memset(buffer, 0, BUFFER_SIZE);
 
         idtostr(node_info->succ_id, id_str);
 
         sprintf(buffer, "SUCC %s %s %s\n", id_str, node_info->succ_ip, node_info->succ_port);
 
-        n = write(node_info->pred_fd, buffer, BUFFER_SIZE);
+        n = write(node_info->pred_fd, buffer, strlen(buffer));
         if( n == -1) exit(EXIT_FAILURE);
+
+        memset(buffer, 0, BUFFER_SIZE);
 
         send_stp_table(node_info, node_info->succ_fd);
 
@@ -305,7 +359,27 @@ int process_message_fromchord_out(node_information * node_info){
     char buffer[BUFFER_SIZE];
     memset(buffer, 0, BUFFER_SIZE);
 
-    int n = read(node_info->chord_fd, buffer, BUFFER_SIZE);
+    char tmp = '\0';
+    int n, i;
+
+    i = 0;
+    n = 0;
+
+    while ((n = read(node_info->chord_fd, &tmp, 1)) != -1)
+    {
+
+        if(n == 0) break;
+
+        buffer[i] = tmp;
+        i++;
+
+        if(tmp == '\n') {
+            buffer[i] = '\0';
+            break;
+        }
+
+    }
+    
     if (n == -1) return E_FATAL;
 
     if(n == 0) {
@@ -347,6 +421,13 @@ int process_message_fromchord_in(node_information * node_info){
     char buffer[BUFFER_SIZE];
     memset(buffer, 0, BUFFER_SIZE);
 
+
+    char tmp3 = '\0';
+    int n, i;
+
+    i = 0;
+    n = 0;
+
     chord_information * tmp = node_info->chord_head;
     chord_information * tmp2 = tmp; // this will lag behind the main pointer
 
@@ -355,7 +436,24 @@ int process_message_fromchord_in(node_information * node_info){
     while (tmp != NULL)
     {
         if(tmp->active == 1) {
-            int n = read(tmp->chord_fd, buffer, BUFFER_SIZE);
+            
+
+            while ((n = read(tmp->chord_fd, &tmp3, 1)) != -1)
+            {
+
+                if(n == 0) break;
+
+                buffer[i] = tmp3;
+                i++;
+
+                if(tmp3 == '\n') {
+                    buffer[i] = '\0';
+                    break;
+                }
+
+            }
+
+
             if (n == -1) return E_FATAL;
 
             tmp->active = 0;
@@ -494,9 +592,10 @@ int process_ENTRY(node_information * node_info, char buffer[BUFFER_SIZE], whofro
 
         sprintf(message, "SUCC %s %s %s\n", id_str, ip, port);
 
-        n = write(node_info->pred_fd, message, BUFFER_SIZE); //SUCC i i.IP i.TCP\n
+        n = write(node_info->pred_fd, message, strlen(message)); //SUCC i i.IP i.TCP\n
         if (n == -1) exit(1);
 
+        memset(message, 0, BUFFER_SIZE);
 
         node_info->ss_id = node_info->succ_id;
         node_info->succ_id = id;
@@ -524,8 +623,10 @@ int process_ENTRY(node_information * node_info, char buffer[BUFFER_SIZE], whofro
 
         sprintf(message, "PRED %s\n", id_str);
 
-        n = write(node_info->succ_fd, message, BUFFER_SIZE); //PRED l\n
+        n = write(node_info->succ_fd, message, strlen(message)); //PRED l\n
         if (n == -1) exit(1);
+
+        memset(message, 0, BUFFER_SIZE);
 
         //Now send him all my spt table
 
@@ -559,9 +660,10 @@ int process_ENTRY(node_information * node_info, char buffer[BUFFER_SIZE], whofro
             
             sprintf(message, "SUCC %s %s %s\n", id_str, node_info->succ_ip, node_info->succ_port);
 
-            n = write(node_info->pred_fd, message, BUFFER_SIZE);
+            n = write(node_info->pred_fd, message, strlen(message));
             if (n == -1) exit(1);
 
+            memset(message, 0, BUFFER_SIZE);
 
             n = getaddrinfo(node_info->succ_ip, node_info->succ_port, &hints, &res);
             if (n != 0) exit(1);
@@ -579,7 +681,7 @@ int process_ENTRY(node_information * node_info, char buffer[BUFFER_SIZE], whofro
 
             sprintf(message, "PRED %s\n", id_str);
 
-            n = write(node_info->succ_fd, message, BUFFER_SIZE);
+            n = write(node_info->succ_fd, message, strlen(message));
             if (n == -1) exit(1);
 
 
@@ -595,7 +697,7 @@ int process_ENTRY(node_information * node_info, char buffer[BUFFER_SIZE], whofro
         
 
 
-        n = write(node_info->pred_fd, buffer, BUFFER_SIZE);
+        n = write(node_info->pred_fd, buffer, strlen(buffer));
         if (n == -1) exit(1);
 
         strcpy(node_info->pred_ip, ip);
@@ -614,7 +716,7 @@ int process_ENTRY(node_information * node_info, char buffer[BUFFER_SIZE], whofro
 
         sprintf(message, "SUCC %s %s %s\n", id_str, node_info->succ_ip, node_info->succ_port);
 
-        n = write(node_info->pred_fd, message, BUFFER_SIZE);
+        n = write(node_info->pred_fd, message, strlen(message));
         if (n == -1) exit(1);
 
 
@@ -702,7 +804,7 @@ int process_PRED(node_information * node_info, char buffer[BUFFER_SIZE], whofrom
 
         sprintf(buffer_to_send, "SUCC %s %s %s\n", id_str, node_info->succ_ip, node_info->succ_port);
 
-        n = write(node_info->pred_fd, buffer_to_send, BUFFER_SIZE);
+        n = write(node_info->pred_fd, buffer_to_send, strlen(buffer_to_send));
         if( n == -1) exit(EXIT_FAILURE);
 
         send_stp_table(node_info, node_info->pred_fd);
@@ -742,55 +844,6 @@ int process_ROUTE(node_information * node_info, char buffer[BUFFER_SIZE], whofro
         return E_NON_FATAL;
     }
 
-   /* if(n == 3) { // this means we got a clear route instruction, the path is no longer valid, im just going to assume the node does not exist anymore
-        memset(route, 0, 300); // the assumption was retarded
-        route[0] = '-';
-
-        pos = -1;
-        min = 100;
-
-        if((node_info->fwd_table[id_dest][id_neighbour][0] != '\0') && (strcmp(node_info->fwd_table[id_dest][id_neighbour], node_info->stp_table[id_dest]) == 1))
-        {
-            memset(buffer, 0, BUFFER_SIZE);
-
-            for(int j = 0; j < 100; j++) {
-                if(node_info->fwd_table[id_dest][j][0] == '\0') continue;
-
-                count1 = 0;
-
-                if(j == id_dest) continue;
-
-                for (int k=0; node_info->fwd_table[id_dest][j][k]; k++) {
-                    count1 += (node_info->fwd_table[id_dest][j][k] == '-');
-                }
-                if( count1 < min ){
-                    min = count1;
-                    pos = j;
-                } 
-
-            }
-
-            if (pos == -1) { // we found no path
-                memset(node_info->stp_table[id_dest], 0, 100);
-                node_info->exp_table[id_dest] = 0;
-                announce_shortest_path(node_info, buffer, node_info->id, id_dest);
-            }
-
-            if( pos > -1) {
-                strcpy(node_info->stp_table[id_dest], node_info->fwd_table[id_dest][pos]);
-                node_info->exp_table[id_dest] = pos;
-                announce_shortest_path(node_info, node_info->stp_table[id_dest], node_info->id, id_dest);
-            }
-
-        }
-
-
-        memset(node_info->fwd_table[id_dest][id_neighbour], 0, 100);
-
-        //maybe remove from the others too lol
-
-        return SUCCESS_HIDDEN;
-    }*/
     //First we check if path is valid...
 
     if(n == 3) is_valid = 0;
@@ -980,21 +1033,21 @@ int process_CHAT(node_information * node_info, char buffer[CHAT_BUFFER_SIZE]){
     sprintf(sent, "CHAT %d %d %s\n", from, dest, message);
 
     if(next_node == node_info->succ_id){
-        n = write(node_info->succ_fd, sent, CHAT_BUFFER_SIZE);
+        n = write(node_info->succ_fd, sent, strlen(sent));
         if(n == -1) exit(EXIT_FAILURE);
         printf("\x1b[32m> Sent...\x1b[0m\n");
         return SUCCESS;
     }
 
     if(next_node == node_info->pred_id){
-        n = write(node_info->pred_fd, sent, CHAT_BUFFER_SIZE);
+        n = write(node_info->pred_fd, sent, strlen(sent));
         if(n == -1) exit(EXIT_FAILURE);
         printf("\x1b[32m> Sent...\x1b[0m\n");
         return SUCCESS;
     }
 
     if(next_node == node_info->chord_id){
-        n = write(node_info->chord_fd, sent, CHAT_BUFFER_SIZE);
+        n = write(node_info->chord_fd, sent, strlen(sent));
         if(n == -1) exit(EXIT_FAILURE);
         printf("\x1b[32m> Sent...\x1b[0m\n");
         return SUCCESS;
@@ -1007,7 +1060,7 @@ int process_CHAT(node_information * node_info, char buffer[CHAT_BUFFER_SIZE]){
     while (tmp != NULL)
     {
         if((tmp->chord_id == next_node) && (tmp->chord_fd != -1)){
-            n = write(tmp->chord_fd, sent, CHAT_BUFFER_SIZE);
+            n = write(tmp->chord_fd, sent, strlen(sent));
             if(n == -1) exit(EXIT_FAILURE);
             printf("\x1b[32m> Sent...\x1b[0m\n");
             return SUCCESS;
@@ -1088,13 +1141,13 @@ int announce_shortest_path(node_information * node_info, char path[BUFFER_SIZE],
 
     if((node_info->succ_fd != -1) && (node_info->succ_id != node_info->id)) {
 
-        n = write(node_info->succ_fd, buffer_out, BUFFER_SIZE); // tell it to my successor
+        n = write(node_info->succ_fd, buffer_out, strlen(buffer_out)); // tell it to my successor
         if(n == -1) return E_FATAL;
     }
 
     if((node_info->pred_fd != -1) && (node_info->pred_id != node_info->id)) {
 
-        n = write(node_info->pred_fd, buffer_out, BUFFER_SIZE); // tell it to my predecessor
+        n = write(node_info->pred_fd, buffer_out, strlen(buffer_out)); // tell it to my predecessor
         if(n == -1) return E_FATAL;
 
     }
@@ -1102,7 +1155,7 @@ int announce_shortest_path(node_information * node_info, char path[BUFFER_SIZE],
 
     if((node_info->chord_fd != -1) && (node_info->chord_id != node_info->id)) {
 
-        n = write(node_info->chord_fd, buffer_out, BUFFER_SIZE); // tell it to the chord that's connected to me
+        n = write(node_info->chord_fd, buffer_out, strlen(buffer_out)); // tell it to the chord that's connected to me
         if(n == -1) return E_FATAL;
 
     }
@@ -1112,7 +1165,7 @@ int announce_shortest_path(node_information * node_info, char path[BUFFER_SIZE],
     while (tmp != NULL)
     {
         if((tmp->chord_fd != -1)) {
-            n = write(tmp->chord_fd, buffer_out, BUFFER_SIZE); // tell it to the chord that's connected to me
+            n = write(tmp->chord_fd, buffer_out, strlen(buffer_out)); // tell it to the chord that's connected to me
             if(n == -1) {
                 return E_FATAL;
 
@@ -1128,27 +1181,6 @@ int announce_shortest_path(node_information * node_info, char path[BUFFER_SIZE],
 }
 
 
-int announce_shortest_path_neighbour(node_information * node_info, char path[BUFFER_SIZE], int start, int end, int fd){
-
-    char buffer_out[BUFFER_SIZE];
-    int n; 
-
-    memset(buffer_out, 0, BUFFER_SIZE);
-
-    sprintf(buffer_out, "ROUTE %d %d %s\n", start, end, path); //We format the message to send to all our neighbours
-
-
-    if((fd != -1)) {
-
-        n = write(fd, buffer_out, BUFFER_SIZE); // tell it to my successor
-        if(n == -1) return E_FATAL;
-    }
-
-
-    return SUCCESS;
-
-}
-
 void send_stp_table(node_information * node_info, int fd){
 
     char message[BUFFER_SIZE];
@@ -1159,7 +1191,7 @@ void send_stp_table(node_information * node_info, int fd){
     for(int i = 0; i < 100; i++){
         if(node_info->stp_table[i][0] != '\0') {
             sprintf(message, "ROUTE %d %d %s\n", node_info->id, i, node_info->stp_table[i]);
-            n = write(fd, message, BUFFER_SIZE); // Spam routes to my predecessor because i just established a connection
+            n = write(fd, message, strlen(message)); // Spam routes to my predecessor because i just established a connection
             if (n == -1) exit(1);
         }
     }
