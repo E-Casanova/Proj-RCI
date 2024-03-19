@@ -600,7 +600,7 @@ int join(node_information * node_info, char ring_id[3], char node_id[2]){
     
     if(n_nodes == 0) {
 
-        printf("> No nodes in ring, joining with id %s\n", node_id);
+        printf("\x1b[32m> No nodes in ring, joining with id %s\x1b[0m\n", node_id);
 
         sprintf(buffer_out, "REG %s %s %s %s", ring_id, node_id, node_info->ipaddr, node_info->port);
         sprintf(buffer_in, " ");
@@ -759,7 +759,7 @@ int direct_join(node_information * node_info, int node_id, int succ_id, char suc
         inet_ntop(AF_INET, &((struct sockaddr_in*)&addr)->sin_addr, connection_ip, INET_ADDRSTRLEN);
         strcpy(node_info->pred_ip, connection_ip);
 
-        printf("\x1b[34m> Connection accepted from %s:%s (myself)\x1b[0m\n", node_info->pred_ip, node_info->pred_port);
+        //printf("\x1b[34m> Connection accepted from %s:%s (myself)\x1b[0m\n", node_info->pred_ip, node_info->pred_port);
     }
 
     node_info->succ_id = succ_id;

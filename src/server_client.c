@@ -60,9 +60,9 @@ int accept_inbound_connection(node_information * node_info){
     node_info->temp_fd = newfd;
     strcpy(node_info->temp_ip, connection_ip);
 
-    printf("\x1b[34m> Connection accepted from %s:%s\x1b[0m\n", node_info->temp_ip, node_info->temp_port);
+    if(DEBUG) printf("\x1b[34m> Connection accepted from %s:%s\x1b[0m\n", node_info->temp_ip, node_info->temp_port);
 
-    return SUCCESS;
+    return SUCCESS_HIDDEN;
 
 }
 
@@ -73,10 +73,6 @@ int process_message_fromtemp(node_information * node_info){
 
     char tmp = '\0';
     int n, i;
-
-
-    //int n = read(node_info->succ_fd, buffer, BUFFER_SIZE); THIS DOES NOT WORK IF THEY SEND A LOT OF MESSAGES AT A TIME
-
 
     i = 0;
     n = 0;
@@ -99,13 +95,16 @@ int process_message_fromtemp(node_information * node_info){
     if (n == -1) return E_FATAL;
 
     if( n == 0) {
+
         printf("Connection lost with temporary node...\n");
+
         close(node_info->temp_fd);
         node_info->temp_fd = -1;
+
         return E_NON_FATAL;
+        
     };
 
-    //printf("temp: %s\n", buffer);
 
     if(strncmp(buffer, "ENTRY ", 6) == 0){
 
@@ -141,13 +140,8 @@ int process_message_frompred(node_information * node_info){
     char buffer[BUFFER_SIZE];
     memset(buffer, 0, BUFFER_SIZE);
 
-
-
     char tmp = '\0';
     int n, i;
-
-
-    //int n = read(node_info->succ_fd, buffer, BUFFER_SIZE); THIS DOES NOT WORK IF THEY SEND A LOT OF MESSAGES AT A TIME
 
 
     i = 0;
@@ -168,14 +162,13 @@ int process_message_frompred(node_information * node_info){
 
     }
 
-
-
     if (n == -1) return E_FATAL;
 
-    //printf("pred: %s\n", buffer);
         
     if( n == 0) {
-        printf("\n> Connection closed with predecessor: %s\n", node_info->pred_ip);
+
+        if(DEBUG) printf("Connection closed with predecessor: %s:%s\n", node_info->pred_ip, node_info->pred_port);
+
         close(node_info->pred_fd);
         node_info->pred_fd = -1;
 
@@ -186,14 +179,13 @@ int process_message_frompred(node_information * node_info){
         memset(node_info->pred_port, 0, sizeof(node_info->pred_port));
 
 
-        return SUCCESS;
+        return SUCCESS_HIDDEN;
     }
 
-    //printf("%s", buffer);
 
     if(strncmp(buffer, "ENTRY ", 6) == 0){
 
-        return process_ENTRY(node_info, buffer, FROM_PRED); // ignore
+        return process_ENTRY(node_info, buffer, FROM_PRED); // Will only happen when 1 node in ring
 
     }
 
@@ -221,10 +213,6 @@ int process_message_fromsucc(node_information * node_info){
     char tmp = '\0';
     int n, i;
 
-
-    //int n = read(node_info->succ_fd, buffer, BUFFER_SIZE); THIS DOES NOT WORK IF THEY SEND A LOT OF MESSAGES AT A TIME
-
-
     i = 0;
     n = 0;
 
@@ -248,13 +236,13 @@ int process_message_fromsucc(node_information * node_info){
     
     if( n == 0) {
 
+        if(DEBUG) printf("Connection closed with successor: %s:%s\n", node_info->succ_ip, node_info->succ_port);
+
         char id_str[3];
         id_str[2] = '\0';
         idtostr(node_info->id, id_str);
 
         free(node_info->succ.res);
-
-        printf("\n> Connection closed with successor: %s\n", node_info->succ_ip);
         
         close(node_info->succ_fd);
         node_info->succ_fd = -1;
@@ -293,7 +281,7 @@ int process_message_fromsucc(node_information * node_info){
             short unsigned int port = ntohs(((struct sockaddr_in*)&addr)->sin_port);
             snprintf(node_info->pred_port, sizeof(node_info->temp_port), "%hu", port);
 
-            printf("\x1b[34m> Connection accepted from %s (myself)\x1b[0m\n", connection_ip);
+            if(DEBUG) printf("\x1b[34m> Connection accepted from %s (myself)\x1b[0m\n", connection_ip);
 
             node_info->pred_id = node_info->id;
             strcpy(node_info->pred_ip, connection_ip);
@@ -303,7 +291,7 @@ int process_message_fromsucc(node_information * node_info){
             int n = write(node_info->succ_fd,buffer, BUFFER_SIZE);
             if (n == -1) return E_FATAL; */
 
-            return SUCCESS;
+            return SUCCESS_HIDDEN;
         }
 
 
@@ -330,8 +318,10 @@ int process_message_fromsucc(node_information * node_info){
 
         send_stp_table(node_info, node_info->succ_fd);
 
-        return SUCCESS;
+        return SUCCESS_HIDDEN;
     }
+
+    
 
     if(strncmp(buffer, "ENTRY ", 6) == 0){
 
@@ -393,7 +383,7 @@ int process_message_fromchord_out(node_information * node_info){
     if (n == -1) return E_FATAL;
 
     if(n == 0) {
-        printf("> Connection closed with chord: %s", node_info->chord_ip);
+        if(DEBUG) printf("Connection closed with chord: %s:%s\n", node_info->chord_ip, node_info->chord_port);
 
         if((node_info->chord_id != node_info->succ_id) && (node_info->chord_id != node_info->pred_id)) clear_id_from_tables(node_info, node_info->chord_id);
 
@@ -404,7 +394,7 @@ int process_message_fromchord_out(node_information * node_info){
         memset(node_info->chord_port, 0, 6);
         node_info->chord_fd = -1;
 
-        return SUCCESS;
+        return SUCCESS_HIDDEN;
 
     }
 
@@ -469,7 +459,7 @@ int process_message_fromchord_in(node_information * node_info){
             tmp->active = 0;
 
             if(n == 0) {
-                printf("> Connection closed with chord: %s\n", tmp->chord_ip);
+                if(DEBUG) printf("Connection closed with chord: %s:%s\n", tmp->chord_ip, tmp->chord_port);
 
                 if((node_info->pred_id != -1) && (tmp->chord_id != node_info->succ_id) && (tmp->chord_id != node_info->pred_id)) clear_id_from_tables(node_info, tmp->chord_id);
 
@@ -484,7 +474,7 @@ int process_message_fromchord_in(node_information * node_info){
 
                 free(tmp);
 
-                return SUCCESS;
+                return SUCCESS_HIDDEN;
 
             }
 
@@ -1126,7 +1116,7 @@ int process_CHORD(node_information * node_info, char buffer[BUFFER_SIZE], whofro
         
         tmp2->next = tmp;
 
-        printf("> Set chord %i\n", tmp->chord_id);
+        printf("Set chord %i\n", tmp->chord_id);
 
         send_stp_table(node_info, tmp->chord_fd);
 

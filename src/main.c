@@ -2,7 +2,7 @@
  * CHAT ON RING
  * PROJETO RCI 2023/24 
  * AUTORIA DE EDUARDO CASANOVA E EDUARDO SILVESTRE
- *
+ * GRUPO 56
 */
 
 #include "utility.h"
@@ -121,23 +121,23 @@ int main(int argc, char *argv[])
             success = process_message_fromsucc(app_node);
             break;
         case I_NEW_CONNECTION:
-            printf("New connection inbound\n");
+            if(DEBUG) printf("New connection inbound\n");
             fflush(stdout);
             success = accept_inbound_connection(app_node);
             break;
         case I_MESSAGE_TEMP:
-            printf("> New message from temporary node\n> ");
+            if(DEBUG) printf("New message from temporary node\n> ");
             fflush(stdout);
             success = process_message_fromtemp(app_node);
             break;
         case I_MESSAGE_CHORD_IN:
             //printf("> New message from chord\n");
-            fflush(stdout);
+            //fflush(stdout);
             success = process_message_fromchord_in(app_node);
             break;
         case I_MESSAGE_CHORD_OUT:
             //printf("> New message from chord\n");
-            fflush(stdout);
+            //fflush(stdout);
             success = process_message_fromchord_out(app_node);
             break;
         default:

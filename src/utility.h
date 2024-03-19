@@ -25,6 +25,7 @@
 
 #define BUFFER_SIZE 300
 #define CHAT_BUFFER_SIZE 300
+#define DEBUG 0
 
 /*
  * Enumeration to represent various types of interrupts
