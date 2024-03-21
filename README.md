@@ -14,6 +14,9 @@ Este projeto de Rede de Computadores e Internet (RCI) visa desenvolver uma aplic
 - GCC para compilação do código fonte
 - Sistema operacional Linux ou compatível
 
+## Utilização
+- **COR** `IP TCP regIp regTCP`
+
 ## Comandos da Interface de Utilizador
 - `join (j) ring id`: Entrar num anel especificado com um ID único.
 - `direct join (dj) id succid succIP succTCP`: Entrar diretamente num anel sem consultar o servidor de nós.
