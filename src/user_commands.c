@@ -315,7 +315,7 @@ int execute_user_command(node_information *node_info){
 
         next_node = node_info->exp_table[dest];
 
-        if(next_node <= 0) {
+        if(next_node < 0) {
             printf("\x1b[33m> No path to destination id: %d\x1b[0m\n", dest);
             return E_NON_FATAL;
         }
