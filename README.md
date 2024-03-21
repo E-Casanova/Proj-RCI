@@ -1,7 +1,7 @@
 # Chat Sobre Anel RCI
 
 ## Descrição do Projeto
-Este projeto de Rede de Computadores e Internet (RCI) visa desenvolver uma aplicação de chat que opera dentro de uma topologia de rede em anel
+Este projeto de Redes de Computadores e Internet (RCI) visa desenvolver uma aplicação de chat que opera dentro de uma topologia de rede em anel
 
 ## Funcionalidades
 - **Topologia em Anel**: Implementação de uma rede em anel onde cada nó se conecta apenas ao seu sucessor e predecessor, formando um círculo de comunicação.
